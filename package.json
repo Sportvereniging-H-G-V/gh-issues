@@ -1,0 +1,14 @@
+{
+  "name": "gh-issues-creator",
+  "version": "1.0.0",
+  "description": "Simpele pagina voor het aanmaken van GitHub issues in Sportvereniging-H-G-V repos",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Issues – Sportvereniging H.G.V.</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.35rem;
+      color: var(--muted);
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.95rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .message {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .message.success {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+    .message.error {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--error);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+    .message a { color: var(--accent); }
+    .loading { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GitHub Issue aanmaken</h1>
+    <p class="subtitle">Organisatie: Sportvereniging-H-G-V</p>
+
+    <form id="form">
+      <label for="repo">Repository</label>
+      <select id="repo" required>
+        <option value="">Repos laden…</option>
+      </select>
+
+      <label for="title">Titel *</label>
+      <input type="text" id="title" name="title" required placeholder="Korte titel van het issue">
+
+      <label for="body">Beschrijving (optioneel)</label>
+      <textarea id="body" name="body" placeholder="Uitleg of stappen om te reproduceren…"></textarea>
+
+      <button type="submit" id="submit">Issue aanmaken</button>
+    </form>
+
+    <div id="message" class="message" style="display: none;"></div>
+  </div>
+
+  <script>
+    const repoSelect = document.getElementById('repo');
+    const form = document.getElementById('form');
+    const messageEl = document.getElementById('message');
+    const submitBtn = document.getElementById('submit');
+
+    function showMessage(text, type, link) {
+      messageEl.style.display = 'block';
+      messageEl.className = 'message ' + type;
+      messageEl.innerHTML = link ? text + ' <a href="' + link + '" target="_blank" rel="noopener">Bekijk issue →</a>' : text;
+    }
+
+    function hideMessage() {
+      messageEl.style.display = 'none';
+    }
+
+    async function loadRepos() {
+      try {
+        const res = await fetch('/api/repos');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.error || 'Fout bij ophalen');
+        repoSelect.innerHTML = '<option value="">Kies een repository…</option>';
+        data.forEach((r) => {
+          const opt = document.createElement('option');
+          opt.value = r.name;
+          opt.textContent = r.description ? `${r.name} — ${r.description}` : r.name;
+          repoSelect.appendChild(opt);
+        });
+      } catch (e) {
+        repoSelect.innerHTML = '<option value="">Fout: ' + e.message + '</option>';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage();
+      const repo = repoSelect.value;
+      const title = document.getElementById('title').value.trim();
+      const body = document.getElementById('body').value.trim();
+      if (!repo || !title) return;
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/issues', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo, title, body }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
+        showMessage('Issue aangemaakt. ', 'success', data.url);
+        document.getElementById('title').value = '';
+        document.getElementById('body').value = '';
+      } catch (err) {
+        showMessage('Fout: ' + err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    loadRepos();
+  </script>
+</body>
+</html>
