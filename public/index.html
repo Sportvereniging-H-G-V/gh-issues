@@ -8,6 +8,7 @@
     :root {
       --bg: #0d1117;
       --surface: #161b22;
+      --surface-hover: #21262d;
       --border: #30363d;
       --text: #e6edf3;
       --muted: #8b949e;
@@ -25,161 +26,118 @@
       min-height: 100vh;
     }
     .container {
-      max-width: 560px;
+      max-width: 720px;
       margin: 0 auto;
     }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.75rem;
       font-weight: 600;
       margin-bottom: 0.5rem;
     }
     .subtitle {
       color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 1rem;
       margin-bottom: 1.5rem;
     }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 500;
-      margin-bottom: 0.35rem;
-      color: var(--muted);
-    }
-    select, input, textarea {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.95rem;
+    .intro {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      margin-bottom: 1rem;
-    }
-    select:focus, input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
-    }
-    textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
       font-size: 0.95rem;
-      font-weight: 500;
-      border-radius: 6px;
-      cursor: pointer;
+      line-height: 1.6;
     }
-    button:hover { opacity: 0.9; }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .intro p { margin: 0 0 0.75rem; }
+    .intro p:last-child { margin-bottom: 0; }
+    .intro strong { color: var(--text); }
+    .repo-grid {
+      display: grid;
+      gap: 0.75rem;
     }
-    .message {
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
+    .repo-card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
     }
-    .message.success {
-      background: rgba(63, 185, 80, 0.15);
-      color: var(--success);
-      border: 1px solid rgba(63, 185, 80, 0.3);
+    .repo-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      text-decoration: none;
     }
-    .message.error {
-      background: rgba(248, 81, 73, 0.15);
+    .repo-card .name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .repo-card .desc {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+    .loading {
+      color: var(--muted);
+      padding: 1rem 0;
+    }
+    .error {
       color: var(--error);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      padding: 1rem 0;
     }
-    .message a { color: var(--accent); }
-    .loading { color: var(--muted); }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>GitHub Issue aanmaken</h1>
-    <p class="subtitle">Organisatie: Sportvereniging-H-G-V</p>
+    <h1>GitHub Issues – Sportvereniging H.G.V.</h1>
+    <p class="subtitle">Kies een repository om issues te bekijken of aan te maken.</p>
 
-    <form id="form">
-      <label for="repo">Repository</label>
-      <select id="repo" required>
-        <option value="">Repos laden…</option>
-      </select>
+    <div class="intro">
+      <p><strong>Wat doet deze pagina?</strong> Hier kun je eenvoudig issues aanmaken voor de GitHub-repositories van Sportvereniging H.G.V. Per repository kun je kiezen uit drie soorten issues: <strong>contentwijziging</strong>, <strong>technisch probleem</strong> (bug) of <strong>nieuwe functie</strong>. Elk type heeft een eigen formulier met de juiste vragen.</p>
+      <p>Selecteer hieronder een repository. Op de volgende pagina vind je de drie opties om een nieuw issue aan te maken en een overzicht van bestaande issues.</p>
+    </div>
 
-      <label for="title">Titel *</label>
-      <input type="text" id="title" name="title" required placeholder="Korte titel van het issue">
-
-      <label for="body">Beschrijving (optioneel)</label>
-      <textarea id="body" name="body" placeholder="Uitleg of stappen om te reproduceren…"></textarea>
-
-      <button type="submit" id="submit">Issue aanmaken</button>
-    </form>
-
-    <div id="message" class="message" style="display: none;"></div>
+    <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Repository kiezen</h2>
+    <div id="repos" class="repo-grid">
+      <div class="loading">Repositories laden…</div>
+    </div>
   </div>
 
   <script>
-    const repoSelect = document.getElementById('repo');
-    const form = document.getElementById('form');
-    const messageEl = document.getElementById('message');
-    const submitBtn = document.getElementById('submit');
-
-    function showMessage(text, type, link) {
-      messageEl.style.display = 'block';
-      messageEl.className = 'message ' + type;
-      messageEl.innerHTML = link ? text + ' <a href="' + link + '" target="_blank" rel="noopener">Bekijk issue →</a>' : text;
-    }
-
-    function hideMessage() {
-      messageEl.style.display = 'none';
-    }
+    const reposEl = document.getElementById('repos');
 
     async function loadRepos() {
       try {
         const res = await fetch('/api/repos');
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || data.error || 'Fout bij ophalen');
-        repoSelect.innerHTML = '<option value="">Kies een repository…</option>';
-        data.forEach((r) => {
-          const opt = document.createElement('option');
-          opt.value = r.name;
-          opt.textContent = r.description ? `${r.name} — ${r.description}` : r.name;
-          repoSelect.appendChild(opt);
-        });
+        if (!data.length) {
+          reposEl.innerHTML = '<p class="error">Geen repositories gevonden.</p>';
+          return;
+        }
+        reposEl.innerHTML = data.map((r) => {
+          const desc = r.description ? `<span class="desc">${escapeHtml(r.description)}</span>` : '';
+          return `<a class="repo-card" href="repo.html?repo=${encodeURIComponent(r.name)}">
+            <span class="name">${escapeHtml(r.name)}</span>
+            ${desc}
+          </a>`;
+        }).join('');
       } catch (e) {
-        repoSelect.innerHTML = '<option value="">Fout: ' + e.message + '</option>';
+        reposEl.innerHTML = '<p class="error">Fout: ' + escapeHtml(e.message) + '</p>';
       }
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideMessage();
-      const repo = repoSelect.value;
-      const title = document.getElementById('title').value.trim();
-      const body = document.getElementById('body').value.trim();
-      if (!repo || !title) return;
-      submitBtn.disabled = true;
-      try {
-        const res = await fetch('/api/issues', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repo, title, body }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
-        showMessage('Issue aangemaakt. ', 'success', data.url);
-        document.getElementById('title').value = '';
-        document.getElementById('body').value = '';
-      } catch (err) {
-        showMessage('Fout: ' + err.message, 'error');
-      } finally {
-        submitBtn.disabled = false;
-      }
-    });
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
 
     loadRepos();
   </script>

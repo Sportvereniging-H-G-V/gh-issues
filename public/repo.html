@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issues – Sportvereniging H.G.V.</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back { display: inline-block; margin-bottom: 1rem; font-size: 0.9rem; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .repo-desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .section-title { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+    .templates {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .template-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .template-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+    }
+    .template-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .template-card .name { font-weight: 600; }
+    .template-card .hint { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+    .form-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .form-panel.visible { display: block; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.35rem;
+      color: var(--muted);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.95rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+    .form-section { margin-bottom: 1.25rem; }
+    .form-section label .hint { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .message {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .message.success {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+    .message.error {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--error);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+    }
+    .message a { color: var(--accent); }
+    .issues-list { margin-top: 0.5rem; }
+    .issue-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .issue-item:last-child { border-bottom: none; }
+    .issue-item .state {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .issue-item .state.open {
+      background: rgba(63, 185, 80, 0.2);
+      color: var(--success);
+    }
+    .issue-item .state.closed {
+      background: rgba(139, 148, 158, 0.2);
+      color: var(--muted);
+    }
+    .issue-item a { flex: 1; min-width: 0; }
+    .issue-item a { color: var(--text); }
+    .issue-item a:hover { color: var(--accent); }
+    .issue-item .date { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
+    .loading, .error { color: var(--muted); padding: 0.5rem 0; }
+    .error { color: var(--error); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="index.html">← Terug naar overzicht repositories</a>
+
+    <h1 id="repo-name">Repository</h1>
+    <p class="repo-desc" id="repo-desc"></p>
+
+    <div class="section-title">Nieuw issue aanmaken</div>
+    <p style="color: var(--muted); font-size: 0.9rem; margin: 0 0 0.75rem;">Kies een type issue. Het formulier wordt ingevuld met de bijbehorende vragen.</p>
+    <div id="templates" class="templates">
+      <div class="loading">Templates laden…</div>
+    </div>
+
+    <div id="form-panel" class="form-panel">
+      <div class="section-title">Issue invullen</div>
+      <form id="form">
+        <div class="form-section">
+          <label for="title">Titel *</label>
+          <input type="text" id="title" required placeholder="Korte titel">
+        </div>
+        <div id="form-sections"></div>
+        <button type="submit" id="submit">Issue aanmaken</button>
+      </form>
+      <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <div class="section-title">Bestaande issues</div>
+    <div id="issues" class="issues-list">
+      <div class="loading">Issues laden…</div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const repo = params.get('repo');
+    if (!repo) {
+      document.body.innerHTML = '<div class="container"><a href="index.html">← Terug</a><p class="error">Geen repository gekozen.</p></div>';
+    } else {
+      const repoNameEl = document.getElementById('repo-name');
+      const repoDescEl = document.getElementById('repo-desc');
+      const templatesEl = document.getElementById('templates');
+      const formPanel = document.getElementById('form-panel');
+      const form = document.getElementById('form');
+      const titleInput = document.getElementById('title');
+      const formSectionsEl = document.getElementById('form-sections');
+      const submitBtn = document.getElementById('submit');
+      const messageEl = document.getElementById('message');
+      const issuesEl = document.getElementById('issues');
+
+      let templates = [];
+      let currentTemplate = null;
+
+      function showMessage(text, type, link) {
+        messageEl.style.display = 'block';
+        messageEl.className = 'message ' + type;
+        messageEl.innerHTML = link ? text + ' <a href="' + link + '" target="_blank" rel="noopener">Bekijk issue →</a>' : text;
+      }
+      function hideMessage() { messageEl.style.display = 'none'; }
+
+      async function loadRepoInfo() {
+        try {
+          const res = await fetch('/api/repos');
+          const data = await res.json();
+          if (!res.ok) return;
+          const r = data.find((x) => x.name === repo);
+          if (r) {
+            repoNameEl.textContent = r.name;
+            repoDescEl.textContent = r.description || '';
+            repoDescEl.style.display = r.description ? 'block' : 'none';
+          } else {
+            repoNameEl.textContent = repo;
+          }
+        } catch (_) {
+          repoNameEl.textContent = repo;
+        }
+      }
+
+      async function loadTemplates() {
+        try {
+          const res = await fetch('/api/templates');
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            throw new Error('Server gaf geen JSON terug. Start de app met: npm run dev');
+          }
+          const data = await res.json();
+          templates = Array.isArray(data) ? data : [];
+          if (!res.ok) throw new Error(data.error || data.detail || 'Templates laden mislukt');
+          templatesEl.innerHTML = templates.map((t) => `
+            <div class="template-card" data-id="${escapeHtml(t.id)}">
+              <span class="name">${escapeHtml(t.name)}</span>
+              <span class="hint">${escapeHtml(t.titlePrefix || 'Geen titelprefix')}</span>
+            </div>
+          `).join('');
+          templatesEl.querySelectorAll('.template-card').forEach((el) => {
+            el.addEventListener('click', () => selectTemplate(el.dataset.id));
+          });
+        } catch (e) {
+          templatesEl.innerHTML = '<p class="error">' + escapeHtml(e.message) + '</p>';
+        }
+      }
+
+      function selectTemplate(id) {
+        const t = templates.find((x) => x.id === id);
+        if (!t) return;
+        currentTemplate = t;
+        templatesEl.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
+        const card = templatesEl.querySelector('[data-id="' + id + '"]');
+        if (card) card.classList.add('active');
+        titleInput.placeholder = t.titlePrefix ? t.titlePrefix + '…' : 'Titel';
+        titleInput.value = t.titlePrefix || '';
+        // Formulier opbouwen uit secties (één veld per vraag)
+        formSectionsEl.innerHTML = '';
+        const sections = (t.sections && t.sections.length) ? t.sections : [];
+        if (sections.length === 0 && t.body) {
+          const div = document.createElement('div');
+          div.className = 'form-section';
+          div.innerHTML = '<label for="body-fallback">Beschrijving</label><textarea id="body-fallback" name="Beschrijving" rows="8" placeholder="Vul de beschrijving in…"></textarea>';
+          formSectionsEl.appendChild(div);
+        }
+        sections.forEach((sec, i) => {
+          const idAttr = 'section-' + i;
+          const div = document.createElement('div');
+          div.className = 'form-section';
+          const placeholderAttr = escapeHtml(sec.placeholder || '').replace(/"/g, '&quot;').replace(/\n/g, ' ');
+          div.innerHTML =
+            '<label for="' + idAttr + '">' + escapeHtml(sec.heading) + '</label>' +
+            '<textarea id="' + idAttr + '" name="' + escapeHtml(sec.heading) + '" placeholder="' + placeholderAttr + '" rows="4"></textarea>';
+          formSectionsEl.appendChild(div);
+        });
+        formPanel.classList.add('visible');
+        hideMessage();
+      }
+
+      async function loadIssues() {
+        try {
+          const res = await fetch('/api/repos/' + encodeURIComponent(repo) + '/issues');
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            throw new Error('Server gaf geen JSON terug. Start de app met: npm run dev');
+          }
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
+          if (!data.length) {
+            issuesEl.innerHTML = '<p class="loading">Nog geen issues in deze repository.</p>';
+            return;
+          }
+          const fmt = (s) => {
+            try {
+              const d = new Date(s);
+              return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch (_) { return s; }
+          };
+          issuesEl.innerHTML = data.map((i) => `
+            <div class="issue-item">
+              <span class="state ${i.state}">${i.state === 'OPEN' ? 'Open' : 'Gesloten'}</span>
+              <a href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>
+              <span class="date">#${i.number} · ${fmt(i.createdAt || i.created_at)}</span>
+            </div>
+          `).join('');
+        } catch (e) {
+          issuesEl.innerHTML = '<p class="error">' + escapeHtml(e.message) + '</p>';
+        }
+      }
+
+      function escapeHtml(s) {
+        if (!s) return '';
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function buildBodyFromSections() {
+        const parts = [];
+        formSectionsEl.querySelectorAll('.form-section textarea').forEach((ta) => {
+          const heading = ta.getAttribute('name');
+          const value = (ta.value || '').trim();
+          if (heading) parts.push('## ' + heading + '\n\n' + (value || '(niet ingevuld)'));
+        });
+        return parts.join('\n\n').trim() || '';
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideMessage();
+        const title = titleInput.value.trim();
+        const body = buildBodyFromSections();
+        if (!title) return;
+        submitBtn.disabled = true;
+        try {
+          const res = await fetch('/api/issues', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo, title, body }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
+          showMessage('Issue aangemaakt. ', 'success', data.url);
+          titleInput.value = currentTemplate ? (currentTemplate.titlePrefix || '') : '';
+          if (currentTemplate && currentTemplate.sections) {
+            formSectionsEl.querySelectorAll('textarea').forEach((ta) => { ta.value = ''; });
+          }
+          loadIssues();
+        } catch (err) {
+          showMessage('Fout: ' + err.message, 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      loadRepoInfo();
+      loadTemplates();
+      loadIssues();
+    }
+  </script>
+</body>
+</html>

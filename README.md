@@ -22,12 +22,16 @@ Open daarna in je browser: **http://localhost:3333**
 
 ## Gebruik
 
-1. Kies een repository uit de dropdown (repos worden via `gh repo list Sportvereniging-H-G-V` opgehaald).
-2. Vul een **titel** in (verplicht).
-3. Optioneel: vul een **beschrijving** in.
-4. Klik op **Issue aanmaken**. Het issue wordt via `gh issue create` in de gekozen repo aangemaakt.
+1. **Homepage** – Op de startpagina staat uitleg en een overzicht van alle repositories. Klik op een repository om naar de bijbehorende pagina te gaan.
+2. **Repopagina** – Per repository kun je:
+   - **Nieuw issue aanmaken**: kies één van de drie templates (Content wijziging, Technisch probleem, Nieuwe functie). Het formulier wordt ingevuld met de bijbehorende vragen; pas aan en verstuur.
+   - **Bestaande issues bekijken**: onder het formulier staat een lijst van open en gesloten issues met links naar GitHub.
+
+De templates staan in `.github/ISSUE_TEMPLATE/` en worden automatisch aangeboden bij het aanmaken van een issue.
 
 ## API
 
 - `GET /api/repos` – lijst van repos in de organisatie (via `gh`)
+- `GET /api/templates` – de drie issue-templates (naam, titelprefix, body)
+- `GET /api/repos/:repo/issues` – lijst van issues in die repo (open + gesloten)
 - `POST /api/issues` – body: `{ "repo": "naam-repo", "title": "...", "body": "..." }` – maakt een issue aan
