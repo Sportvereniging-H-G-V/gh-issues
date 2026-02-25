@@ -4,106 +4,304 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GitHub Issues – Sportvereniging H.G.V.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface-hover: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #58a6ff;
-      --success: #3fb950;
-      --error: #f85149;
+      --bg: #060B13;
+      --surface: #0C1220;
+      --surface-2: #111A2E;
+      --surface-hover: #162035;
+      --border: #1C2B42;
+      --text: #E8EEFF;
+      --muted: #4A6080;
+      --muted-2: #7A93B5;
+      --accent: #FF5200;
+      --success: #00C48C;
+      --error: #FF3535;
     }
-    * { box-sizing: border-box; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+      font-family: 'DM Sans', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 2rem;
       min-height: 100vh;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+      background-position: -14px -14px;
     }
+
+    /* ─── Nav ─── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(6, 11, 19, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      gap: 0.875rem;
+    }
+
+    .badge-hgv {
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: 0.14em;
+      padding: 0.18rem 0.55rem 0.1rem;
+      border-radius: 4px;
+      line-height: 1.5;
+      user-select: none;
+    }
+
+    .nav-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+    }
+
+    .nav-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted-2);
+      font-weight: 500;
+    }
+
+    /* ─── Main ─── */
     .container {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
+      padding: 4.5rem 2rem 6rem;
     }
-    a {
+
+    /* ─── Hero ─── */
+    .hero {
+      margin-bottom: 3.5rem;
+    }
+
+    .kicker {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
       color: var(--accent);
-      text-decoration: none;
-    }
-    a:hover { text-decoration: underline; }
-    h1 {
-      font-size: 1.75rem;
       font-weight: 600;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .subtitle {
+
+    .kicker::before {
+      content: '';
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    h1.display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      line-height: 0.92;
+      letter-spacing: 0.025em;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+
+    h1.display em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .hero-body {
+      max-width: 480px;
+      color: var(--muted-2);
+      font-size: 0.88rem;
+      line-height: 1.8;
+    }
+
+    /* ─── Section divider ─── */
+    .section-div {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .section-div-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
       color: var(--muted);
-      font-size: 1rem;
-      margin-bottom: 1.5rem;
+      font-weight: 600;
+      white-space: nowrap;
     }
-    .intro {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 2rem;
-      font-size: 0.95rem;
-      line-height: 1.6;
+
+    .section-div-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
-    .intro p { margin: 0 0 0.75rem; }
-    .intro p:last-child { margin-bottom: 0; }
-    .intro strong { color: var(--text); }
+
+    /* ─── Repo grid ─── */
     .repo-grid {
       display: grid;
-      gap: 0.75rem;
+      gap: 5px;
     }
+
     .repo-card {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
+      padding: 0.875rem 1.125rem;
       color: var(--text);
-      transition: background 0.15s, border-color 0.15s;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.2s, transform 0.15s;
+      position: relative;
+      overflow: hidden;
+      animation: riseIn 0.4s ease both;
     }
+
+    .repo-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent);
+      transform: scaleY(0);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-origin: bottom;
+    }
+
     .repo-card:hover {
       background: var(--surface-hover);
-      border-color: var(--accent);
+      border-color: rgba(255, 82, 0, 0.45);
+      transform: translateX(4px);
       text-decoration: none;
     }
+
+    .repo-card:hover::before {
+      transform: scaleY(1);
+    }
+
+    .repo-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.875rem;
+      line-height: 1;
+    }
+
+    .repo-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
     .repo-card .name {
       font-weight: 600;
-      font-size: 1rem;
+      font-size: 0.875rem;
+      color: var(--text);
     }
+
     .repo-card .desc {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin-top: 0.25rem;
+      font-size: 0.78rem;
+      color: var(--muted-2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+
+    .repo-arrow {
+      color: var(--muted);
+      font-size: 1.2rem;
+      line-height: 1;
+      transition: color 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+
+    .repo-card:hover .repo-arrow {
+      color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── States ─── */
     .loading {
-      color: var(--muted);
-      padding: 1rem 0;
+      color: var(--muted-2);
+      font-size: 0.84rem;
+      padding: 2.5rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
     }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading::before {
+      content: '';
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
     .error {
       color: var(--error);
-      padding: 1rem 0;
+      font-size: 0.84rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 53, 53, 0.07);
+      border: 1px solid rgba(255, 53, 53, 0.2);
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>GitHub Issues – Sportvereniging H.G.V.</h1>
-    <p class="subtitle">Kies een repository om issues te bekijken of aan te maken.</p>
+  <nav class="nav">
+    <span class="badge-hgv">H.G.V.</span>
+    <div class="nav-sep"></div>
+    <span class="nav-label">GitHub Issues</span>
+  </nav>
 
-    <div class="intro">
-      <p><strong>Wat doet deze pagina?</strong> Hier kun je eenvoudig issues aanmaken voor de GitHub-repositories van Sportvereniging H.G.V. Per repository kun je kiezen uit drie soorten issues: <strong>contentwijziging</strong>, <strong>technisch probleem</strong> (bug) of <strong>nieuwe functie</strong>. Elk type heeft een eigen formulier met de juiste vragen.</p>
-      <p>Selecteer hieronder een repository. Op de volgende pagina vind je de drie opties om een nieuw issue aan te maken en een overzicht van bestaande issues.</p>
+  <div class="container">
+    <div class="hero">
+      <div class="kicker">Sportvereniging H.G.V.</div>
+      <h1 class="display">Repository<br><em>kiezen</em></h1>
+      <p class="hero-body">Kies een repository om issues te bekijken of aan te maken. Per repository kun je kiezen uit drie soorten: contentwijziging, technisch probleem of nieuwe functie.</p>
     </div>
 
-    <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Repository kiezen</h2>
+    <div class="section-div">
+      <span class="section-div-label">Repositories</span>
+      <div class="section-div-line"></div>
+    </div>
+
     <div id="repos" class="repo-grid">
       <div class="loading">Repositories laden…</div>
     </div>
@@ -112,31 +310,70 @@
   <script>
     const reposEl = document.getElementById('repos');
 
+    function createRepoCard(r, delayIndex) {
+      const a = document.createElement('a');
+      a.className = 'repo-card';
+      a.href = 'repo.html?repo=' + encodeURIComponent(r.name);
+      a.style.animationDelay = (0.04 + delayIndex * 0.04) + 's';
+
+      const icon = document.createElement('span');
+      icon.className = 'repo-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '📁';
+
+      const info = document.createElement('span');
+      info.className = 'repo-info';
+
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = r.name;
+      info.appendChild(name);
+
+      if (r.description) {
+        const desc = document.createElement('span');
+        desc.className = 'desc';
+        desc.textContent = r.description;
+        info.appendChild(desc);
+      }
+
+      const arrow = document.createElement('span');
+      arrow.className = 'repo-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '›';
+
+      a.appendChild(icon);
+      a.appendChild(info);
+      a.appendChild(arrow);
+
+      return a;
+    }
+
     async function loadRepos() {
       try {
         const res = await fetch('/api/repos');
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || data.error || 'Fout bij ophalen');
+
+        reposEl.replaceChildren();
+
         if (!data.length) {
-          reposEl.innerHTML = '<p class="error">Geen repositories gevonden.</p>';
+          const p = document.createElement('p');
+          p.className = 'error';
+          p.textContent = 'Geen repositories gevonden.';
+          reposEl.appendChild(p);
           return;
         }
-        reposEl.innerHTML = data.map((r) => {
-          const desc = r.description ? `<span class="desc">${escapeHtml(r.description)}</span>` : '';
-          return `<a class="repo-card" href="repo.html?repo=${encodeURIComponent(r.name)}">
-            <span class="name">${escapeHtml(r.name)}</span>
-            ${desc}
-          </a>`;
-        }).join('');
-      } catch (e) {
-        reposEl.innerHTML = '<p class="error">Fout: ' + escapeHtml(e.message) + '</p>';
-      }
-    }
 
-    function escapeHtml(s) {
-      const div = document.createElement('div');
-      div.textContent = s;
-      return div.innerHTML;
+        const fragment = document.createDocumentFragment();
+        data.forEach((r, i) => fragment.appendChild(createRepoCard(r, i)));
+        reposEl.appendChild(fragment);
+      } catch (e) {
+        reposEl.replaceChildren();
+        const p = document.createElement('p');
+        p.className = 'error';
+        p.textContent = 'Fout: ' + e.message;
+        reposEl.appendChild(p);
+      }
     }
 
     loadRepos();

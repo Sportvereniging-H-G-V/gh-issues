@@ -4,187 +4,518 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Issues – Sportvereniging H.G.V.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface-hover: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --accent: #58a6ff;
-      --success: #3fb950;
-      --error: #f85149;
+      --bg: #060B13;
+      --surface: #0C1220;
+      --surface-2: #111A2E;
+      --surface-hover: #162035;
+      --border: #1C2B42;
+      --text: #E8EEFF;
+      --muted: #4A6080;
+      --muted-2: #7A93B5;
+      --accent: #FF5200;
+      --success: #00C48C;
+      --error: #FF3535;
     }
-    * { box-sizing: border-box; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+      font-family: 'DM Sans', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 2rem;
       min-height: 100vh;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+      background-position: -14px -14px;
     }
-    .container { max-width: 720px; margin: 0 auto; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .back { display: inline-block; margin-bottom: 1rem; font-size: 0.9rem; }
-    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
-    .repo-desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .section-title { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+
+    /* ─── Nav ─── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(6, 11, 19, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      gap: 0.875rem;
+    }
+
+    .badge-hgv {
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: 0.14em;
+      padding: 0.18rem 0.55rem 0.1rem;
+      border-radius: 4px;
+      line-height: 1.5;
+      user-select: none;
+    }
+
+    .nav-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+    }
+
+    .nav-back {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted-2);
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .nav-back:hover {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ─── Main ─── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3.5rem 2rem 6rem;
+    }
+
+    /* ─── Repo header ─── */
+    .repo-header {
+      margin-bottom: 3rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2rem;
+    }
+
+    .kicker {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .kicker::before {
+      content: '';
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    h1.display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .repo-desc {
+      color: var(--muted-2);
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+
+    /* ─── Section divider ─── */
+    .section-div {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .section-div-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .section-div-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Template cards ─── */
     .templates {
       display: grid;
-      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      margin-bottom: 1rem;
     }
+
     .template-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
+      padding: 1.125rem 1.125rem 1rem;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s, border-color 0.2s;
+      position: relative;
+      overflow: hidden;
     }
+
+    .template-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, var(--accent));
+      transform: scaleX(0);
+      transition: transform 0.2s ease;
+      transform-origin: left;
+    }
+
     .template-card:hover {
       background: var(--surface-hover);
-      border-color: var(--accent);
+      border-color: rgba(255, 255, 255, 0.08);
     }
+
+    .template-card:hover::after {
+      transform: scaleX(1);
+    }
+
     .template-card.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
+      border-color: var(--card-accent, var(--accent));
+      background: var(--surface-hover);
     }
-    .template-card .name { font-weight: 600; }
-    .template-card .hint { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+    .template-card.active::after {
+      transform: scaleX(1);
+    }
+
+    .tc-icon {
+      display: block;
+      font-size: 1.4rem;
+      margin-bottom: 0.6rem;
+      line-height: 1;
+    }
+
+    .template-card .name {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .template-card .hint {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted-2);
+      line-height: 1.4;
+    }
+
+    /* ─── Form panel ─── */
     .form-panel {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-      margin-top: 1rem;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
       display: none;
+      animation: slideDown 0.2s ease;
     }
-    .form-panel.visible { display: block; }
+
+    .form-panel.visible {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-section {
+      margin-bottom: 1.125rem;
+    }
+
     label {
       display: block;
-      font-size: 0.85rem;
-      font-weight: 500;
-      margin-bottom: 0.35rem;
-      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted-2);
+      margin-bottom: 0.4rem;
     }
-    input, textarea {
+
+    input[type="text"],
+    textarea {
       width: 100%;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.95rem;
+      padding: 0.6rem 0.875rem;
+      font-size: 0.88rem;
+      font-family: 'DM Sans', system-ui, sans-serif;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--text);
-      margin-bottom: 1rem;
-    }
-    input:focus, textarea:focus {
+      transition: border-color 0.15s;
       outline: none;
-      border-color: var(--accent);
     }
-    textarea { min-height: 100px; resize: vertical; font-family: inherit; }
-    .form-section { margin-bottom: 1.25rem; }
-    .form-section label .hint { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 82, 0, 0.1);
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
     button {
       background: var(--accent);
       color: #fff;
       border: none;
-      padding: 0.6rem 1.2rem;
-      font-size: 0.95rem;
-      font-weight: 500;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.875rem;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-weight: 600;
       border-radius: 6px;
       cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: 0.02em;
     }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    button:hover:not(:disabled) {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ─── Message ─── */
     .message {
-      margin-top: 1rem;
       padding: 0.75rem 1rem;
       border-radius: 6px;
-      font-size: 0.9rem;
+      font-size: 0.84rem;
+      margin-top: 1rem;
+      display: none;
+      gap: 0.4rem;
+      align-items: baseline;
     }
+
     .message.success {
-      background: rgba(63, 185, 80, 0.15);
+      display: flex;
+      flex-wrap: wrap;
+      background: rgba(0, 196, 140, 0.08);
       color: var(--success);
-      border: 1px solid rgba(63, 185, 80, 0.3);
+      border: 1px solid rgba(0, 196, 140, 0.25);
     }
+
     .message.error {
-      background: rgba(248, 81, 73, 0.15);
+      display: flex;
+      flex-wrap: wrap;
+      background: rgba(255, 53, 53, 0.07);
       color: var(--error);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      border: 1px solid rgba(255, 53, 53, 0.2);
     }
-    .message a { color: var(--accent); }
-    .issues-list { margin-top: 0.5rem; }
+
+    .message a {
+      color: inherit;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ─── Issues list ─── */
+    .issues-section {
+      margin-top: 2.5rem;
+    }
+
+    .issues-list {
+      display: grid;
+      gap: 1px;
+    }
+
     .issue-item {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.6rem 0;
+      gap: 0.875rem;
+      padding: 0.75rem 0;
       border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: 0.875rem;
     }
-    .issue-item:last-child { border-bottom: none; }
-    .issue-item .state {
-      font-size: 0.75rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
+
+    .issue-item:last-child {
+      border-bottom: none;
+    }
+
+    .state {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
       flex-shrink: 0;
     }
-    .issue-item .state.open {
-      background: rgba(63, 185, 80, 0.2);
+
+    .state.open {
+      background: rgba(0, 196, 140, 0.12);
       color: var(--success);
+      border: 1px solid rgba(0, 196, 140, 0.25);
     }
-    .issue-item .state.closed {
-      background: rgba(139, 148, 158, 0.2);
+
+    .state.closed {
+      background: rgba(122, 147, 181, 0.1);
+      color: var(--muted-2);
+      border: 1px solid rgba(122, 147, 181, 0.15);
+    }
+
+    .issue-item a {
+      flex: 1;
+      min-width: 0;
+      color: var(--text);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: color 0.15s;
+    }
+
+    .issue-item a:hover {
+      color: var(--accent);
+    }
+
+    .date {
       color: var(--muted);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
-    .issue-item a { flex: 1; min-width: 0; }
-    .issue-item a { color: var(--text); }
-    .issue-item a:hover { color: var(--accent); }
-    .issue-item .date { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
-    .loading, .error { color: var(--muted); padding: 0.5rem 0; }
-    .error { color: var(--error); }
+
+    /* ─── States ─── */
+    .loading {
+      color: var(--muted-2);
+      font-size: 0.84rem;
+      padding: 2rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading::before {
+      content: '';
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .error {
+      color: var(--error);
+      font-size: 0.84rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 53, 53, 0.07);
+      border: 1px solid rgba(255, 53, 53, 0.2);
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
+  <nav class="nav">
+    <span class="badge-hgv">H.G.V.</span>
+    <div class="nav-sep"></div>
+    <a class="nav-back" href="index.html">← Repositories</a>
+  </nav>
+
   <div class="container">
-    <a class="back" href="index.html">← Terug naar overzicht repositories</a>
+    <div class="repo-header">
+      <div class="kicker">Repository</div>
+      <h1 class="display" id="repo-name">Laden…</h1>
+      <p class="repo-desc" id="repo-desc" style="display: none;"></p>
+    </div>
 
-    <h1 id="repo-name">Repository</h1>
-    <p class="repo-desc" id="repo-desc"></p>
+    <div class="section-div">
+      <span class="section-div-label">Nieuw issue aanmaken</span>
+      <div class="section-div-line"></div>
+    </div>
 
-    <div class="section-title">Nieuw issue aanmaken</div>
-    <p style="color: var(--muted); font-size: 0.9rem; margin: 0 0 0.75rem;">Kies een type issue. Het formulier wordt ingevuld met de bijbehorende vragen.</p>
     <div id="templates" class="templates">
       <div class="loading">Templates laden…</div>
     </div>
 
     <div id="form-panel" class="form-panel">
-      <div class="section-title">Issue invullen</div>
       <form id="form">
         <div class="form-section">
-          <label for="title">Titel *</label>
-          <input type="text" id="title" required placeholder="Korte titel">
+          <label for="title">Titel</label>
+          <input type="text" id="title" required placeholder="Korte beschrijving">
         </div>
         <div id="form-sections"></div>
-        <button type="submit" id="submit">Issue aanmaken</button>
+        <div class="form-actions">
+          <button type="submit" id="submit">Issue aanmaken</button>
+        </div>
       </form>
-      <div id="message" class="message" style="display: none;"></div>
+      <div id="message" class="message"></div>
     </div>
 
-    <div class="section-title">Bestaande issues</div>
-    <div id="issues" class="issues-list">
-      <div class="loading">Issues laden…</div>
+    <div class="issues-section">
+      <div class="section-div">
+        <span class="section-div-label">Bestaande issues</span>
+        <div class="section-div-line"></div>
+      </div>
+      <div id="issues" class="issues-list">
+        <div class="loading">Issues laden…</div>
+      </div>
     </div>
   </div>
 
   <script>
     const params = new URLSearchParams(location.search);
     const repo = params.get('repo');
+
     if (!repo) {
-      document.body.innerHTML = '<div class="container"><a href="index.html">← Terug</a><p class="error">Geen repository gekozen.</p></div>';
+      document.querySelector('.container').replaceChildren();
+      const back = document.createElement('a');
+      back.href = 'index.html';
+      back.textContent = '← Terug';
+      const err = document.createElement('p');
+      err.className = 'error';
+      err.style.marginTop = '1rem';
+      err.textContent = 'Geen repository gekozen.';
+      document.querySelector('.container').appendChild(back);
+      document.querySelector('.container').appendChild(err);
     } else {
       const repoNameEl = document.getElementById('repo-name');
       const repoDescEl = document.getElementById('repo-desc');
@@ -197,32 +528,80 @@
       const messageEl = document.getElementById('message');
       const issuesEl = document.getElementById('issues');
 
+      const templateMeta = {
+        'content-wijziging':  { emoji: '✏️',  accent: '#FF5200' },
+        'technisch-probleem': { emoji: '🐛',  accent: '#FF3535' },
+        'nieuwe-functie':     { emoji: '✨',  accent: '#4080FF' },
+      };
+
       let templates = [];
       let currentTemplate = null;
 
+      /* ── Message helpers ── */
       function showMessage(text, type, link) {
-        messageEl.style.display = 'block';
         messageEl.className = 'message ' + type;
-        messageEl.innerHTML = link ? text + ' <a href="' + link + '" target="_blank" rel="noopener">Bekijk issue →</a>' : text;
+        messageEl.replaceChildren();
+        messageEl.appendChild(document.createTextNode(text + (link ? ' ' : '')));
+        if (link) {
+          const a = document.createElement('a');
+          a.href = link;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = 'Bekijk issue →';
+          messageEl.appendChild(a);
+        }
       }
-      function hideMessage() { messageEl.style.display = 'none'; }
 
+      function hideMessage() {
+        messageEl.className = 'message';
+        messageEl.replaceChildren();
+      }
+
+      /* ── Repo info ── */
       async function loadRepoInfo() {
         try {
           const res = await fetch('/api/repos');
           const data = await res.json();
           if (!res.ok) return;
           const r = data.find((x) => x.name === repo);
-          if (r) {
-            repoNameEl.textContent = r.name;
-            repoDescEl.textContent = r.description || '';
-            repoDescEl.style.display = r.description ? 'block' : 'none';
-          } else {
-            repoNameEl.textContent = repo;
+          repoNameEl.textContent = r ? r.name : repo;
+          if (r && r.description) {
+            repoDescEl.textContent = r.description;
+            repoDescEl.style.display = 'block';
           }
         } catch (_) {
           repoNameEl.textContent = repo;
         }
+      }
+
+      /* ── Templates ── */
+      function createTemplateCard(t) {
+        const meta = templateMeta[t.id] || { emoji: '📋', accent: '#FF5200' };
+
+        const div = document.createElement('div');
+        div.className = 'template-card';
+        div.dataset.id = t.id;
+        div.style.setProperty('--card-accent', meta.accent);
+
+        const icon = document.createElement('span');
+        icon.className = 'tc-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = meta.emoji;
+
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = t.name;
+
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = t.titlePrefix || 'Nieuw issue aanmaken';
+
+        div.appendChild(icon);
+        div.appendChild(name);
+        div.appendChild(hint);
+
+        div.addEventListener('click', () => selectTemplate(t.id));
+        return div;
       }
 
       async function loadTemplates() {
@@ -235,17 +614,17 @@
           const data = await res.json();
           templates = Array.isArray(data) ? data : [];
           if (!res.ok) throw new Error(data.error || data.detail || 'Templates laden mislukt');
-          templatesEl.innerHTML = templates.map((t) => `
-            <div class="template-card" data-id="${escapeHtml(t.id)}">
-              <span class="name">${escapeHtml(t.name)}</span>
-              <span class="hint">${escapeHtml(t.titlePrefix || 'Geen titelprefix')}</span>
-            </div>
-          `).join('');
-          templatesEl.querySelectorAll('.template-card').forEach((el) => {
-            el.addEventListener('click', () => selectTemplate(el.dataset.id));
-          });
+
+          templatesEl.replaceChildren();
+          const fragment = document.createDocumentFragment();
+          templates.forEach((t) => fragment.appendChild(createTemplateCard(t)));
+          templatesEl.appendChild(fragment);
         } catch (e) {
-          templatesEl.innerHTML = '<p class="error">' + escapeHtml(e.message) + '</p>';
+          templatesEl.replaceChildren();
+          const p = document.createElement('p');
+          p.className = 'error';
+          p.textContent = e.message;
+          templatesEl.appendChild(p);
         }
       }
 
@@ -253,32 +632,92 @@
         const t = templates.find((x) => x.id === id);
         if (!t) return;
         currentTemplate = t;
+
         templatesEl.querySelectorAll('.template-card').forEach((c) => c.classList.remove('active'));
         const card = templatesEl.querySelector('[data-id="' + id + '"]');
         if (card) card.classList.add('active');
+
         titleInput.placeholder = t.titlePrefix ? t.titlePrefix + '…' : 'Titel';
         titleInput.value = t.titlePrefix || '';
-        // Formulier opbouwen uit secties (één veld per vraag)
-        formSectionsEl.innerHTML = '';
+
+        // Bouw formuliersecties
+        formSectionsEl.replaceChildren();
         const sections = (t.sections && t.sections.length) ? t.sections : [];
+
         if (sections.length === 0 && t.body) {
           const div = document.createElement('div');
           div.className = 'form-section';
-          div.innerHTML = '<label for="body-fallback">Beschrijving</label><textarea id="body-fallback" name="Beschrijving" rows="8" placeholder="Vul de beschrijving in…"></textarea>';
+
+          const lbl = document.createElement('label');
+          lbl.setAttribute('for', 'body-fallback');
+          lbl.textContent = 'Beschrijving';
+
+          const ta = document.createElement('textarea');
+          ta.id = 'body-fallback';
+          ta.name = 'Beschrijving';
+          ta.rows = 8;
+          ta.placeholder = 'Vul de beschrijving in…';
+
+          div.appendChild(lbl);
+          div.appendChild(ta);
           formSectionsEl.appendChild(div);
         }
+
         sections.forEach((sec, i) => {
           const idAttr = 'section-' + i;
           const div = document.createElement('div');
           div.className = 'form-section';
-          const placeholderAttr = escapeHtml(sec.placeholder || '').replace(/"/g, '&quot;').replace(/\n/g, ' ');
-          div.innerHTML =
-            '<label for="' + idAttr + '">' + escapeHtml(sec.heading) + '</label>' +
-            '<textarea id="' + idAttr + '" name="' + escapeHtml(sec.heading) + '" placeholder="' + placeholderAttr + '" rows="4"></textarea>';
+
+          const lbl = document.createElement('label');
+          lbl.setAttribute('for', idAttr);
+          lbl.textContent = sec.heading;
+
+          const ta = document.createElement('textarea');
+          ta.id = idAttr;
+          ta.name = sec.heading;
+          ta.rows = 4;
+          ta.placeholder = sec.placeholder || '';
+
+          div.appendChild(lbl);
+          div.appendChild(ta);
           formSectionsEl.appendChild(div);
         });
+
         formPanel.classList.add('visible');
         hideMessage();
+      }
+
+      /* ── Issues ── */
+      function formatDate(s) {
+        try {
+          return new Date(s).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (_) { return s; }
+      }
+
+      function createIssueItem(i) {
+        const div = document.createElement('div');
+        div.className = 'issue-item';
+
+        const badge = document.createElement('span');
+        const stateKey = (i.state || '').toLowerCase();
+        badge.className = 'state ' + (stateKey === 'open' ? 'open' : 'closed');
+        badge.textContent = stateKey === 'open' ? 'Open' : 'Gesloten';
+
+        const link = document.createElement('a');
+        link.href = i.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = i.title;
+
+        const date = document.createElement('span');
+        date.className = 'date';
+        date.textContent = '#' + i.number + ' · ' + formatDate(i.createdAt || i.created_at);
+
+        div.appendChild(badge);
+        div.appendChild(link);
+        div.appendChild(date);
+
+        return div;
       }
 
       async function loadIssues() {
@@ -290,35 +729,30 @@
           }
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
+
+          issuesEl.replaceChildren();
+
           if (!data.length) {
-            issuesEl.innerHTML = '<p class="loading">Nog geen issues in deze repository.</p>';
+            const p = document.createElement('p');
+            p.className = 'loading';
+            p.textContent = 'Nog geen issues in deze repository.';
+            issuesEl.appendChild(p);
             return;
           }
-          const fmt = (s) => {
-            try {
-              const d = new Date(s);
-              return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
-            } catch (_) { return s; }
-          };
-          issuesEl.innerHTML = data.map((i) => `
-            <div class="issue-item">
-              <span class="state ${i.state}">${i.state === 'OPEN' ? 'Open' : 'Gesloten'}</span>
-              <a href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>
-              <span class="date">#${i.number} · ${fmt(i.createdAt || i.created_at)}</span>
-            </div>
-          `).join('');
+
+          const fragment = document.createDocumentFragment();
+          data.forEach((i) => fragment.appendChild(createIssueItem(i)));
+          issuesEl.appendChild(fragment);
         } catch (e) {
-          issuesEl.innerHTML = '<p class="error">' + escapeHtml(e.message) + '</p>';
+          issuesEl.replaceChildren();
+          const p = document.createElement('p');
+          p.className = 'error';
+          p.textContent = e.message;
+          issuesEl.appendChild(p);
         }
       }
 
-      function escapeHtml(s) {
-        if (!s) return '';
-        const div = document.createElement('div');
-        div.textContent = s;
-        return div.innerHTML;
-      }
-
+      /* ── Formulier submit ── */
       function buildBodyFromSections() {
         const parts = [];
         formSectionsEl.querySelectorAll('.form-section textarea').forEach((ta) => {
@@ -344,11 +778,9 @@
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || data.error || 'Fout');
-          showMessage('Issue aangemaakt. ', 'success', data.url);
+          showMessage('Issue aangemaakt.', 'success', data.url);
           titleInput.value = currentTemplate ? (currentTemplate.titlePrefix || '') : '';
-          if (currentTemplate && currentTemplate.sections) {
-            formSectionsEl.querySelectorAll('textarea').forEach((ta) => { ta.value = ''; });
-          }
+          formSectionsEl.querySelectorAll('textarea').forEach((ta) => { ta.value = ''; });
           loadIssues();
         } catch (err) {
           showMessage('Fout: ' + err.message, 'error');
