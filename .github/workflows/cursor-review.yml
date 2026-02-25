@@ -1,0 +1,101 @@
+name: Cursor AI Code Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure git identity
+        run: |
+          git config user.name "Cursor Agent"
+          git config user.email "cursoragent@cursor.com"
+
+      - name: Run Cursor code review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          agent --force --output-format=text --print "
+          Je voert een geautomatiseerde code review uit in een GitHub Actions runner. De gh CLI is beschikbaar en geauthenticeerd via GH_TOKEN. Je mag commentaar plaatsen op pull requests.
+
+          Context:
+          - Repo: $REPO
+          - PR Number: $PR_NUMBER
+          - PR Head SHA: $PR_HEAD_SHA
+          - PR Base SHA: $PR_BASE_SHA
+
+          Doelstellingen:
+          1) Bekijk bestaande review comments en reageer met 'opgelost' indien van toepassing.
+          2) Review de huidige PR diff en markeer alleen duidelijke, ernstige problemen.
+          3) Laat korte inline comments achter (1-2 zinnen) op gewijzigde regels en een korte samenvatting.
+
+          Procedure:
+          - Haal bestaande comments op: gh pr view --json comments
+          - Haal diff op: gh pr diff
+          - Haal gewijzigde bestanden op: gh api repos/\$REPO/pulls/\$PR_NUMBER/files --paginate --jq '.[] | {filename,patch}'
+          - Analyseer ALLEEN op:
+            - Null/undefined dereferences
+            - Resource leaks (onafgesloten bestanden of verbindingen)
+            - Injection (SQL/XSS)
+            - Ontbrekende error handling voor kritieke operaties
+            - Duidelijke logicafouten
+            - Beveiligingskwetsbaarheden
+
+          Commentaarregels:
+          - Max 10 inline comments; prioriteer de meest kritieke problemen
+          - Alle commentaren MOETEN inline zijn (gekoppeld aan een bestand en regel in de diff)
+          - Gebruik emoji: 🚨 Kritiek 🔒 Beveiliging ⚡ Performance ⚠️ Logica ✅ Opgelost
+
+          Indienen:
+          - Als er GEEN problemen zijn: plaats een kort samenvattend commentaar dat er geen problemen zijn, en voer uit: echo 'CRITICAL_ISSUES_FOUND=false' >> \$GITHUB_ENV
+          - Als er WEL problemen zijn: dien ONE review in met ALLEEN inline comments plus een optionele samenvatting.
+          - Gebruik de GitHub Reviews API voor inline comments:
+            - gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews -f event=COMMENT -f body=\"\$SUMMARY\" -f comments='\$COMMENTS_JSON'
+          - Gebruik NIET: gh pr review --approve of --request-changes
+          - Stel aan het einde ALTIJD de variabele in:
+            - Als er 🚨 of 🔒 problemen zijn gevonden: echo 'CRITICAL_ISSUES_FOUND=true' >> \$GITHUB_ENV
+            - Anders: echo 'CRITICAL_ISSUES_FOUND=false' >> \$GITHUB_ENV
+          "
+
+      - name: Approve or request changes
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "${CRITICAL_ISSUES_FOUND:-false}" = "true" ]; then
+            gh pr review "$PR_NUMBER" \
+              --request-changes \
+              --body "🚨 Cursor AI heeft kritieke problemen gevonden. Los de inline commentaren op voordat deze PR gemerged kan worden."
+          else
+            gh pr review "$PR_NUMBER" \
+              --approve \
+              --body "✅ Cursor AI heeft geen kritieke problemen gevonden. De PR is goedgekeurd."
+          fi
