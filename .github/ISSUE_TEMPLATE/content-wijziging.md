@@ -1,7 +1,7 @@
 ---
 name: Content wijziging
 about: Verzoek om bestaande content op de website aan te passen of bij te werken
-title: "[CONTENT] "
+title: ""
 labels: content
 assignees: ''
 ---
@@ -26,7 +26,7 @@ Waarom moet deze content worden aangepast? (bijv. verouderde informatie, fout in
 ## Aanvullende bestanden
 
 Moeten er afbeeldingen, documenten of andere bestanden worden toegevoegd of vervangen?
-- [ ] Ja (voeg ze toe als bijlage)
+- [ ] Ja
 - [ ] Nee
 
 ## Prioriteit

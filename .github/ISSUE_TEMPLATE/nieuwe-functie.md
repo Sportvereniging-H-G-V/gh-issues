@@ -1,7 +1,7 @@
 ---
 name: Nieuwe functie
 about: Stel een nieuwe functie of verbetering voor de website voor
-title: "[FEATURE] "
+title: ""
 labels: enhancement
 assignees: ''
 ---

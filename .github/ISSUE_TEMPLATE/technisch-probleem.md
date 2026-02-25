@@ -1,7 +1,7 @@
 ---
 name: Technisch probleem
 about: Meld een bug of technisch probleem op de website
-title: "[BUG] "
+title: ""
 labels: bug
 assignees: ''
 ---

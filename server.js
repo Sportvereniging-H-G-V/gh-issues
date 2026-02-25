@@ -66,12 +66,16 @@ function loadTemplates() {
     const front = match[1];
     const body = match[2].trim();
     const nameMatch = front.match(/name:\s*(.+)/);
+    const aboutMatch = front.match(/about:\s*(.+)/);
     const titleMatch = front.match(/title:\s*["']?([^"'\n]+)["']?/);
+    const labelMatch = front.match(/labels:\s*(.+)/);
     const sections = parseTemplateSections(body);
     templates.push({
       id: file.replace('.md', ''),
       name: nameMatch ? nameMatch[1].trim() : file,
+      about: aboutMatch ? aboutMatch[1].trim() : '',
       titlePrefix: titleMatch ? titleMatch[1].trim() : '',
+      label: labelMatch ? labelMatch[1].trim() : '',
       body,
       sections,
     });
@@ -107,6 +111,23 @@ app.get('/api/templates', (req, res) => {
   }
 });
 
+/** Lijst org-leden (voor toewijzen aan issue) */
+app.get('/api/org-members', async (req, res) => {
+  try {
+    const out = await runGh(
+      `api "orgs/${ORG}/members?per_page=100" -q '.[].login'`
+    );
+    const logins = out ? out.trim().split(/\s+/).filter(Boolean) : [];
+    res.json(logins);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({
+      error: 'Org-leden ophalen mislukt',
+      detail: e.message,
+    });
+  }
+});
+
 /** Issues van een repo ophalen (via gh) */
 app.get('/api/repos/:repo/issues', async (req, res) => {
   const repo = req.params.repo;
@@ -126,9 +147,9 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
   }
 });
 
-/** Issue aanmaken in gekozen repo (via gh) */
+/** Issue aanmaken in gekozen repo (via GitHub API, zodat labels correct worden gezet) */
 app.post('/api/issues', async (req, res) => {
-  const { repo, title, body } = req.body;
+  const { repo, title, body, label, assignees } = req.body;
   if (!repo || !title) {
     return res.status(400).json({
       error: 'repo en title zijn verplicht',
@@ -141,18 +162,33 @@ app.post('/api/issues', async (req, res) => {
       bodyFile = path.join(os.tmpdir(), `gh-issue-body-${Date.now()}.txt`);
       fs.writeFileSync(bodyFile, body, 'utf8');
     }
-    const args = [
-      'issue', 'create',
-      '--repo', fullRepo,
-      '--title', title,
-    ];
-    if (bodyFile) args.push('--body-file', bodyFile);
-    const out = await runGhArgs(args);
+    const endpoint = `repos/${fullRepo}/issues`;
+    const apiArgs = ['api', endpoint, '--method', 'POST', '-f', `title=${title}`];
+    if (bodyFile) {
+      apiArgs.push('-F', `body=@${bodyFile}`);
+    }
+    if (label) {
+      const labels = String(label).split(',').map((l) => l.trim()).filter(Boolean);
+      labels.forEach((l) => apiArgs.push('-F', `labels[]=${l}`));
+    }
+    if (assignees && Array.isArray(assignees) && assignees.length > 0) {
+      assignees.forEach((login) => {
+        if (login && String(login).trim()) apiArgs.push('-F', `assignees[]=${String(login).trim()}`);
+      });
+    }
+    const out = await runGhArgs(apiArgs);
     if (bodyFile) try { fs.unlinkSync(bodyFile); } catch (_) {}
-    const urlMatch = out.match(/https:\/\/github\.com\/[^\s]+/);
+    let parsed;
+    try {
+      parsed = JSON.parse(out);
+    } catch (_) {
+      parsed = {};
+    }
+    const urlMatch = out.match(/https:\/\/github\.com\/[^\s"']+/);
+    const url = parsed.html_url || (urlMatch ? urlMatch[0] : null);
     res.json({
       ok: true,
-      url: urlMatch ? urlMatch[0] : out,
+      url: url || out,
       message: out,
     });
   } catch (e) {
