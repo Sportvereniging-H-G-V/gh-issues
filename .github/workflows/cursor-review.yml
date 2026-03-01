@@ -33,6 +33,15 @@ jobs:
           git config user.name "Cursor Agent"
           git config user.email "cursoragent@cursor.com"
 
+      - name: Check Cursor API key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "::error::CURSOR_API_KEY is leeg. Repo secret: voeg toe onder Settings → Secrets and variables → Actions. Organisation secret: geef deze repository toegang onder Organisatie → Settings → Secrets → CURSOR_API_KEY → Repository access."
+            exit 1
+          fi
+
       - name: Run Cursor code review
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
