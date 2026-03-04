@@ -1,0 +1,8 @@
+name = "hgv-issues-pages"
+compatibility_date = "2025-01-01"
+
+# Voor Cloudflare Pages wordt de outputdir in het dashboard ingesteld op "public".
+# Deze instelling maakt het makkelijker om lokaal te testen met:
+#   npx wrangler pages dev public
+pages_build_output_dir = "public"
+

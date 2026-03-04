@@ -9,42 +9,49 @@ Simpele pagina om GitHub issues aan te maken voor geselecteerde repositories van
   - Bij voorkeur van een apart bot-account
   - Scopes: minimaal `repo` voor de betreffende organisatie-repositories
 
-## Configuratie
+## Cloudflare Pages deployment
 
-- De organisatie en toegestane repositories staan in `server.js`:
-  - `ORG` – standaard `Sportvereniging-H-G-V`
-  - `REPO_ALLOWLIST` – array met repo-namen of full-names  
-    Laat je deze leeg (`[]`), dan worden alle repos uit de organisatie opgehaald.
+Deze repo is voorbereid om via **Cloudflare Pages** te draaien:
 
-Voorbeeld:
+- De statische frontend staat in `public`.
+- De backend-API draait als **Pages Functions** in de map `functions/`:
+  - `GET /api/repos` – lijst van repos in de organisatie.
+  - `GET /api/templates` – de drie issue-templates (naam, titelprefix, body + secties).
+  - `GET /api/repos/:repo/issues` – lijst van issues in die repo (open + gesloten).
+  - `POST /api/issues` – maakt een issue aan in de gekozen repo.
 
-```js
-const ORG = 'Sportvereniging-H-G-V';
-const REPO_ALLOWLIST = [
-  'website',
-  'backend',
-  'Sportvereniging-H-G-V/speciale-repo',
-];
+### Benodigde secrets/vars in Cloudflare Pages
+
+In het Cloudflare Pages project:
+
+- Zet een Pages **Environment variable** of **Secret**:
+  - `GITHUB_TOKEN` – zelfde token als lokaal gebruikt.
+
+De organisatie (`ORG`) en de toegestane repositories (`REPO_ALLOWLIST`) staan in `functions/_config.js`.
+
+### Koppelen in het Cloudflare dashboard
+
+1. Maak een nieuw **Pages project** aan en koppel het aan deze GitHub-repository.
+2. Build settings:
+   - **Build command**: leeg laten (of `npm install` als je Wrangler lokaal nodig hebt, maar is voor Pages zelf niet nodig).
+   - **Build output directory**: `public`
+3. Framework preset: **None**.
+4. Voeg de omgevingvariabele `GITHUB_TOKEN` toe.
+5. Deploy. De routes `/`, `/:repo` en `/api/*` werken dan via Cloudflare Pages + Functions.
+
+### Lokaal testen met Cloudflare Pages
+
+Voor lokaal testen kun je Wrangler gebruiken (Node wordt alleen hiervoor gebruikt, niet in productie):
+
+```bash
+npm install
+npm run pages:dev
 ```
 
-## Starten
+Dit start een lokale Pages-omgeving op `http://127.0.0.1:8788` met:
 
-1. Kopieer `.env.example` naar `.env` en vul je token in:
-
-   ```bash
-   cp .env.example .env
-   # vervolgens GITHUB_TOKEN invullen in .env
-   ```
-
-2. Installeer en start de app:
-
-   ```bash
-   cd gh-issues-creator
-   npm install
-   npm start
-   ```
-
-Open daarna in je browser: **http://localhost:3333**
+- de statische site uit `public/`
+- de API-routes uit `functions/`
 
 ## Gebruik
 
