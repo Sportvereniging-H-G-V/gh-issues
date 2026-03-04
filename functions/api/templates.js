@@ -13,7 +13,6 @@ export async function onRequestGet() {
     return new Response(
       JSON.stringify({
         error: 'Templates laden mislukt',
-        detail: e.message,
       }),
       {
         status: 500,

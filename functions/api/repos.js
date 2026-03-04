@@ -13,7 +13,6 @@ export async function onRequestGet({ env }) {
     return new Response(
       JSON.stringify({
         error: 'Kon repos niet ophalen',
-        detail: e.message,
       }),
       {
         status: 500,

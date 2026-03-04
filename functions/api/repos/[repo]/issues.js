@@ -31,7 +31,6 @@ export async function onRequestGet({ params, env }) {
     return new Response(
       JSON.stringify({
         error: 'Issues ophalen mislukt',
-        detail: e.message,
       }),
       {
         status: 500,

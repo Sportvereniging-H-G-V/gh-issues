@@ -67,11 +67,11 @@ async function githubRequest(env, method, apiPath, body) {
 }
 
 export async function listRepos(env) {
-  const repos = await githubRequest(
+  const repos = (await githubRequest(
     env,
     'GET',
     `/orgs/${encodeURIComponent(ORG)}/repos?per_page=100`
-  );
+  )) || [];
 
   let mapped = repos.map((r) => ({
     name: r.name,
