@@ -287,7 +287,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Pretty URLs voor repos, bv. /hgvhengelo
 app.get('/:repo', (req, res, next) => {
   const repo = req.params.repo;
-  if (!REPO_ALLOWLIST.includes(repo)) {
+  if (!isRepoAllowed(repo)) {
     return next();
   }
   res.sendFile(path.join(__dirname, 'public', 'repo.html'));
