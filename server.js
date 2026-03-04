@@ -35,6 +35,23 @@ app.use(cors());
 app.use(express.json());
 
 // API-routes vóór static, zodat /api/* altijd JSON krijgt
+function isRepoAllowed(repoIdentifier) {
+  if (!REPO_ALLOWLIST || REPO_ALLOWLIST.length === 0) {
+    return true;
+  }
+  if (!repoIdentifier || typeof repoIdentifier !== 'string') {
+    return false;
+  }
+
+  const trimmed = repoIdentifier.trim();
+  const fullName = trimmed.includes('/') ? trimmed : `${ORG}/${trimmed}`;
+  const shortName = trimmed.includes('/') ? trimmed.split('/')[1] : trimmed;
+
+  return (
+    REPO_ALLOWLIST.includes(shortName) ||
+    REPO_ALLOWLIST.includes(fullName)
+  );
+}
 
 async function githubRequest(method, apiPath, body) {
   if (!GITHUB_TOKEN) {
@@ -160,6 +177,12 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
   const repo = req.params.repo;
   const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
   try {
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({
+        error: 'Toegang tot deze repository is niet toegestaan',
+      });
+    }
+
     const [owner, repoName] = fullRepo.split('/');
     const issues = await githubRequest(
       'GET',
@@ -208,6 +231,12 @@ app.post('/api/issues', async (req, res) => {
   }
   const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
   try {
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({
+        error: 'Issues aanmaken in deze repository is niet toegestaan',
+      });
+    }
+
     const [owner, repoName] = fullRepo.split('/');
 
     let effectiveLabels = Array.isArray(labels) ? labels.slice() : [];
