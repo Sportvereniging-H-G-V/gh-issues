@@ -1,41 +1,89 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const { exec, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
+const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3333;
+
+// GitHub-configuratie: deze kun je in de codebase aanpassen
 const ORG = 'Sportvereniging-H-G-V';
+// Namen of full-names. Laat leeg ([]) voor alle repos.
+const REPO_ALLOWLIST = [
+  'hgvhengelo',
+  'apenkooitoernooi',
+  'hgv-signing',
+  'presentielijst-generator',
+  'dansstudiohengelo',
+  'turnenhengelo',
+];
+
+// Alleen het token komt uit de omgeving (.env)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
 const TEMPLATES_DIR = path.join(__dirname, '.github', 'ISSUE_TEMPLATE');
+
+if (!GITHUB_TOKEN) {
+  // Zonder token kan de server geen GitHub-requests doen; vroegtijdig falen is duidelijker
+  console.warn('Waarschuwing: GITHUB_TOKEN is niet gezet. GitHub API-calls zullen falen.');
+}
 
 app.use(cors());
 app.use(express.json());
 
 // API-routes vóór static, zodat /api/* altijd JSON krijgt
+function isRepoAllowed(repoIdentifier) {
+  if (!REPO_ALLOWLIST || REPO_ALLOWLIST.length === 0) {
+    return true;
+  }
+  if (!repoIdentifier || typeof repoIdentifier !== 'string') {
+    return false;
+  }
 
-function runGh(cmdString) {
-  return new Promise((resolve, reject) => {
-    exec(`gh ${cmdString}`, { maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err) return reject(new Error(stderr || stdout || err.message));
-      resolve(stdout.trim());
-    });
-  });
+  const trimmed = repoIdentifier.trim();
+  const fullName = trimmed.includes('/') ? trimmed : `${ORG}/${trimmed}`;
+  const shortName = trimmed.includes('/') ? trimmed.split('/')[1] : trimmed;
+
+  return (
+    REPO_ALLOWLIST.includes(shortName) ||
+    REPO_ALLOWLIST.includes(fullName)
+  );
 }
 
-function runGhArgs(args) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('gh', args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    let out = '';
-    let err = '';
-    proc.stdout.on('data', (d) => { out += d; });
-    proc.stderr.on('data', (d) => { err += d; });
-    proc.on('close', (code) => {
-      if (code !== 0) return reject(new Error(err || out || `exit ${code}`));
-      resolve(out.trim());
-    });
+async function githubRequest(method, apiPath, body) {
+  if (!GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN ontbreekt in de omgeving');
+  }
+  const res = await fetch(`https://api.github.com${apiPath}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'hgv-issues-tool',
+    },
+    body: body ? JSON.stringify(body) : undefined,
   });
+
+  const text = await res.text();
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      data = text;
+    }
+  }
+
+  if (!res.ok) {
+    const msg = data && data.message ? data.message : text || `status ${res.status}`;
+    throw new Error(msg);
+  }
+
+  return data;
 }
 
 /** Body van een template splitsen in secties (## Kop + inhoud) */
@@ -79,14 +127,31 @@ function loadTemplates() {
   return templates;
 }
 
-/** Lijst repos in de organisatie (via gh) */
+/** Lijst repos in de organisatie (via GitHub API) */
 app.get('/api/repos', async (req, res) => {
   try {
-    const out = await runGh(
-      `repo list ${ORG} --json name,description,url --limit 100`
+    const repos = await githubRequest(
+      'GET',
+      `/orgs/${encodeURIComponent(ORG)}/repos?per_page=100`
     );
-    const repos = JSON.parse(out);
-    res.json(repos);
+    let mapped = repos.map((r) => ({
+      name: r.name,
+      description: r.description,
+      url: r.html_url,
+      full_name: r.full_name,
+      avatarUrl: r.owner && r.owner.avatar_url,
+    }));
+
+    if (REPO_ALLOWLIST && REPO_ALLOWLIST.length > 0) {
+      mapped = mapped.filter((r) => {
+        return (
+          REPO_ALLOWLIST.includes(r.name) ||
+          REPO_ALLOWLIST.includes(r.full_name)
+        );
+      });
+    }
+
+    res.json(mapped);
   } catch (e) {
     console.error(e);
     res.status(500).json({
@@ -112,11 +177,28 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
   const repo = req.params.repo;
   const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
   try {
-    const out = await runGh(
-      `issue list --repo ${fullRepo} --state all --limit 50 --json number,title,state,url,createdAt`
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({
+        error: 'Toegang tot deze repository is niet toegestaan',
+      });
+    }
+
+    const [owner, repoName] = fullRepo.split('/');
+    const issues = await githubRequest(
+      'GET',
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+        repoName
+      )}/issues?state=all&per_page=50`
     );
-    const issues = JSON.parse(out);
-    res.json(issues);
+    const onlyIssues = issues.filter((i) => !i.pull_request);
+    const mapped = onlyIssues.map((i) => ({
+      number: i.number,
+      title: i.title,
+      state: i.state,
+      url: i.html_url,
+      createdAt: i.created_at,
+    }));
+    res.json(mapped);
   } catch (e) {
     console.error(e);
     res.status(500).json({
@@ -126,37 +208,71 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
   }
 });
 
-/** Issue aanmaken in gekozen repo (via gh) */
+function defaultLabelsForTemplateId(id) {
+  switch (id) {
+    case 'content-wijziging':
+      return ['content'];
+    case 'technisch-probleem':
+      return ['bug'];
+    case 'nieuwe-functie':
+      return ['enhancement'];
+    default:
+      return [];
+  }
+}
+
+/** Issue aanmaken in gekozen repo (via GitHub API) */
 app.post('/api/issues', async (req, res) => {
-  const { repo, title, body } = req.body;
+  const { repo, title, body, labels, assignees, templateId } = req.body;
   if (!repo || !title) {
     return res.status(400).json({
       error: 'repo en title zijn verplicht',
     });
   }
   const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
-  let bodyFile;
   try {
-    if (body) {
-      bodyFile = path.join(os.tmpdir(), `gh-issue-body-${Date.now()}.txt`);
-      fs.writeFileSync(bodyFile, body, 'utf8');
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({
+        error: 'Issues aanmaken in deze repository is niet toegestaan',
+      });
     }
-    const args = [
-      'issue', 'create',
-      '--repo', fullRepo,
-      '--title', title,
-    ];
-    if (bodyFile) args.push('--body-file', bodyFile);
-    const out = await runGhArgs(args);
-    if (bodyFile) try { fs.unlinkSync(bodyFile); } catch (_) {}
-    const urlMatch = out.match(/https:\/\/github\.com\/[^\s]+/);
+
+    const [owner, repoName] = fullRepo.split('/');
+
+    let effectiveLabels = Array.isArray(labels) ? labels.slice() : [];
+    if ((!effectiveLabels || effectiveLabels.length === 0) && templateId) {
+      const defaults = defaultLabelsForTemplateId(templateId);
+      if (defaults && defaults.length) {
+        effectiveLabels = defaults;
+      }
+    }
+
+    const payload = {
+      title,
+      body: body || '',
+    };
+    if (Array.isArray(effectiveLabels) && effectiveLabels.length > 0) {
+      payload.labels = effectiveLabels;
+    }
+    if (Array.isArray(assignees) && assignees.length > 0) {
+      payload.assignees = assignees;
+    }
+
+    const issue = await githubRequest(
+      'POST',
+      `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+        repoName
+      )}/issues`,
+      payload
+    );
+
     res.json({
       ok: true,
-      url: urlMatch ? urlMatch[0] : out,
-      message: out,
+      url: issue.html_url,
+      number: issue.number,
+      issue,
     });
   } catch (e) {
-    if (bodyFile) try { fs.unlinkSync(bodyFile); } catch (_) {}
     console.error(e);
     res.status(500).json({
       error: 'Issue aanmaken mislukt',
@@ -167,6 +283,20 @@ app.post('/api/issues', async (req, res) => {
 
 // Static bestanden (na API)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Pretty URLs voor repos, bv. /hgvhengelo
+app.get('/:repo', (req, res, next) => {
+  const repo = req.params.repo;
+  if (!isRepoAllowed(repo)) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'repo.html'));
+});
+
+// 404 fallback voor alles wat overblijft
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+});
 
 app.listen(PORT, () => {
   console.log(`Server op http://localhost:${PORT}`);

@@ -3,33 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GitHub Issues – Sportvereniging H.G.V.</title>
+  <title>Website-/applicatiebeheer – Sportvereniging H.G.V.</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060B13;
-      --surface: #0C1220;
-      --surface-2: #111A2E;
-      --surface-hover: #162035;
-      --border: #1C2B42;
-      --text: #E8EEFF;
-      --muted: #4A6080;
-      --muted-2: #7A93B5;
-      --accent: #FF5200;
-      --success: #00C48C;
-      --error: #FF3535;
+      --bg: #FAFAF9;
+      --surface: #FFFFFF;
+      --surface-2: #F5F5F4;
+      --surface-hover: #EEF2FF;
+      --border: #E5E7EB;
+      --text: #0F172A;
+      --muted: #6B7280;
+      --muted-2: #4B5563;
+      --accent: #1E40AF;
+      --success: #059669;
+      --error: #DC2626;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'DM Sans', system-ui, sans-serif;
+      font-family: 'Nunito', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-image: radial-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px);
       background-size: 28px 28px;
       background-position: -14px -14px;
     }
@@ -41,7 +42,7 @@
       z-index: 100;
       height: 56px;
       border-bottom: 1px solid var(--border);
-      background: rgba(6, 11, 19, 0.88);
+      background: rgba(250, 250, 249, 0.9);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       display: flex;
@@ -50,16 +51,24 @@
       gap: 0.875rem;
     }
 
-    .badge-hgv {
-      background: var(--accent);
-      color: #fff;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 1.05rem;
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .logo img {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .logo-text {
+      font-size: 0.82rem;
       letter-spacing: 0.14em;
-      padding: 0.18rem 0.55rem 0.1rem;
-      border-radius: 4px;
-      line-height: 1.5;
-      user-select: none;
+      text-transform: uppercase;
+      color: var(--muted-2);
+      font-weight: 600;
     }
 
     .nav-sep {
@@ -78,7 +87,7 @@
 
     /* ─── Main ─── */
     .container {
-      max-width: 760px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 4.5rem 2rem 6rem;
     }
@@ -156,59 +165,80 @@
     /* ─── Repo grid ─── */
     .repo-grid {
       display: grid;
-      gap: 5px;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
 
     .repo-card {
       display: flex;
-      align-items: center;
-      gap: 0.875rem;
+      flex-direction: column;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.875rem 1.125rem;
+      border-radius: 0.75rem;
       color: var(--text);
       text-decoration: none;
-      transition: background 0.15s, border-color 0.2s, transform 0.15s;
-      position: relative;
       overflow: hidden;
       animation: riseIn 0.4s ease both;
-    }
-
-    .repo-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-      background: var(--accent);
-      transform: scaleY(0);
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      transform-origin: bottom;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
 
     .repo-card:hover {
-      background: var(--surface-hover);
-      border-color: rgba(255, 82, 0, 0.45);
-      transform: translateX(4px);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+      border-color: var(--accent);
       text-decoration: none;
     }
 
-    .repo-card:hover::before {
-      transform: scaleY(1);
+    .repo-image-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 56%;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+
+    .repo-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.25s ease;
+    }
+
+    .repo-card:hover .repo-image {
+      transform: scale(1.03);
+    }
+
+    .repo-content {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      padding: 0.85rem 1rem 0.95rem;
     }
 
     .repo-icon {
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 999px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      font-size: 0.875rem;
-      line-height: 1;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .repo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .repo-info {
@@ -220,13 +250,13 @@
     }
 
     .repo-card .name {
-      font-weight: 600;
-      font-size: 0.875rem;
+      font-weight: 700;
+      font-size: 0.9rem;
       color: var(--text);
     }
 
     .repo-card .desc {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       color: var(--muted-2);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -235,7 +265,7 @@
 
     .repo-arrow {
       color: var(--muted);
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       line-height: 1;
       transition: color 0.15s, transform 0.15s;
       flex-shrink: 0;
@@ -285,25 +315,26 @@
 </head>
 <body>
   <nav class="nav">
-    <span class="badge-hgv">H.G.V.</span>
-    <div class="nav-sep"></div>
-    <span class="nav-label">GitHub Issues</span>
+    <a href="/" class="logo" aria-label="Terug naar H.G.V. website-/applicatiebeheer">
+      <img src="/favicon.svg" alt="">
+      <span class="logo-text">H.G.V. website-/applicatiebeheer</span>
+    </a>
   </nav>
 
   <div class="container">
     <div class="hero">
       <div class="kicker">Sportvereniging H.G.V.</div>
-      <h1 class="display">Repository<br><em>kiezen</em></h1>
-      <p class="hero-body">Kies een repository om issues te bekijken of aan te maken. Per repository kun je kiezen uit drie soorten: contentwijziging, technisch probleem of nieuwe functie.</p>
+      <h1 class="display">Website of app<br><em>kiezen</em></h1>
+      <p class="hero-body">Kies hieronder de website of applicatie waarvoor je een melding wilt doen. Je kunt bijvoorbeeld een fout doorgeven, een tekstwijziging aanvragen of een idee voor een verbetering insturen.</p>
     </div>
 
     <div class="section-div">
-      <span class="section-div-label">Repositories</span>
+      <span class="section-div-label">Websites en applicaties</span>
       <div class="section-div-line"></div>
     </div>
 
     <div id="repos" class="repo-grid">
-      <div class="loading">Repositories laden…</div>
+      <div class="loading">Websites en applicaties laden…</div>
     </div>
   </div>
 
@@ -313,13 +344,49 @@
     function createRepoCard(r, delayIndex) {
       const a = document.createElement('a');
       a.className = 'repo-card';
-      a.href = 'repo.html?repo=' + encodeURIComponent(r.name);
+      a.href = '/' + encodeURIComponent(r.name);
       a.style.animationDelay = (0.04 + delayIndex * 0.04) + 's';
+
+      // Bovenkant: schermafbeelding
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'repo-image-wrapper';
+      const img = document.createElement('img');
+      img.className = 'repo-image';
+      img.loading = 'lazy';
+      img.src = '/images/repos/' + encodeURIComponent(r.name) + '.webp';
+      img.alt = 'Screenshot van ' + r.name;
+      img.onerror = () => {
+        imageWrapper.style.display = 'none';
+      };
+      imageWrapper.appendChild(img);
+
+      // Onderkant: content
+      const content = document.createElement('div');
+      content.className = 'repo-content';
 
       const icon = document.createElement('span');
       icon.className = 'repo-icon';
       icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = '📁';
+
+      const iconImg = document.createElement('img');
+      iconImg.alt = '';
+      iconImg.loading = 'lazy';
+
+      const iconBase = '/images/repos/' + encodeURIComponent(r.name) + '-favicon';
+      const iconSources = [iconBase + '.png', iconBase + '.svg', iconBase + '.ico'];
+      let iconIndex = 0;
+
+      const tryNextIcon = () => {
+        if (iconIndex >= iconSources.length) {
+          iconImg.remove();
+          return;
+        }
+        iconImg.src = iconSources[iconIndex++];
+      };
+
+      iconImg.onerror = tryNextIcon;
+      tryNextIcon();
+      icon.appendChild(iconImg);
 
       const info = document.createElement('span');
       info.className = 'repo-info';
@@ -341,9 +408,12 @@
       arrow.setAttribute('aria-hidden', 'true');
       arrow.textContent = '›';
 
-      a.appendChild(icon);
-      a.appendChild(info);
-      a.appendChild(arrow);
+      content.appendChild(icon);
+      content.appendChild(info);
+      content.appendChild(arrow);
+
+      a.appendChild(imageWrapper);
+      a.appendChild(content);
 
       return a;
     }
