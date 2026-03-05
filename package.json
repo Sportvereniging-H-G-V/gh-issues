@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "deploy": "wrangler deploy",
-    "preview": "wrangler dev"
+    "pages:dev": "wrangler pages dev public"
   },
   "dependencies": {
     "cors": "^2.8.5",
