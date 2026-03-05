@@ -344,7 +344,7 @@
     function createRepoCard(r, delayIndex) {
       const a = document.createElement('a');
       a.className = 'repo-card';
-      a.href = '/repo?repo=' + encodeURIComponent(r.name);
+      a.href = '/' + encodeURIComponent(r.name);
       a.style.animationDelay = (0.04 + delayIndex * 0.04) + 's';
 
       // Bovenkant: schermafbeelding
