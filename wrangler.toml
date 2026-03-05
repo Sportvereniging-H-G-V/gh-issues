@@ -1,5 +1,0 @@
-name = "hgv-issues-pages"
-compatibility_date = "2025-01-01"
-
-# Cloudflare Pages: static assets uit public/, API routes uit functions/
-pages_build_output_dir = "public"

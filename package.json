@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "pages:dev": "wrangler pages dev public --compatibility-date=2025-01-01"
+    "pages:dev": "wrangler pages dev public"
   },
   "dependencies": {
     "cors": "^2.8.5",
