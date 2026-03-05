@@ -29,13 +29,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler pages project create hgv-issues --production-branch=main 2>/dev/null || true
 
+      - name: Determine branch name
+        id: branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: echo "name=${HEAD_REF:-main}" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v3
+        env:
+          DEPLOY_BRANCH: ${{ steps.branch.outputs.name }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name=hgv-issues --branch=${{ github.head_ref || 'main' }} --commit-dirty=true
+          command: pages deploy public --project-name=hgv-issues --branch=$DEPLOY_BRANCH --commit-dirty=true
 
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
