@@ -2,12 +2,18 @@ import { ORG } from './config';
 import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github';
 import { getTemplates } from './templates';
 
-import repoHtml from '../public/repo.html';
+import indexHtml from '../dist/index.html';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function html() {
+  return new Response(indexHtml, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
 }
 
@@ -76,7 +82,7 @@ export default {
     }
 
     // API: GET /api/repos/:repo/issues
-    const repoIssuesMatch = path.match(/^\/api\/repos\/([^/]+)\/issues$/);
+    const repoIssuesMatch = path.match(/^\/api\/repos\/([^\/]+)\/issues$/);
     if (repoIssuesMatch && request.method === 'GET') {
       const repo = decodeURIComponent(repoIssuesMatch[1]);
       const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
@@ -91,14 +97,12 @@ export default {
       }
     }
 
-    // Clean URLs: /<reponame> → serve repo.html direct
-    if (path !== '/' && !path.startsWith('/api/') && !path.includes('.')) {
-      return new Response(repoHtml, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      });
+    // Static assets (js, css, images, etc.)
+    if (path.includes('.')) {
+      return env.ASSETS.fetch(request);
     }
 
-    // Alles anders: static assets (index.html, favicon, images, 404)
-    return env.ASSETS.fetch(request);
+    // SPA fallback: serve index.html for all client-side routes
+    return html();
   },
 };
