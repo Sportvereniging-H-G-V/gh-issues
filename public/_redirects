@@ -1,1 +1,2 @@
 /api/*  /api/:splat  200
+/*      /repo.html    200
