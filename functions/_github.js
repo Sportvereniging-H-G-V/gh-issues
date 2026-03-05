@@ -95,13 +95,13 @@ export async function listRepos(env) {
 
 export async function listIssues(env, fullRepo) {
   const [owner, repoName] = fullRepo.split('/');
-  const issues = await githubRequest(
+  const issues = (await githubRequest(
     env,
     'GET',
     `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
       repoName
     )}/issues?state=all&per_page=50`
-  );
+  )) || [];
 
   const onlyIssues = issues.filter((i) => !i.pull_request);
   return onlyIssues.map((i) => ({
