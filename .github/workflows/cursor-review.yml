@@ -51,7 +51,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          agent --force --output-format=text --print "
+          agent --force --model "auto" --output-format=text --print "
           Je voert een geautomatiseerde code review uit in een GitHub Actions runner. De gh CLI is beschikbaar en geauthenticeerd via GH_TOKEN. Je mag commentaar plaatsen op pull requests.
 
           Context:

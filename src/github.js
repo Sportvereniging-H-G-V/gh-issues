@@ -1,4 +1,4 @@
-import { ORG, REPO_ALLOWLIST } from './_config';
+import { ORG, REPO_ALLOWLIST } from './config';
 
 export function isRepoAllowed(repoIdentifier) {
   if (!REPO_ALLOWLIST || REPO_ALLOWLIST.length === 0) {
