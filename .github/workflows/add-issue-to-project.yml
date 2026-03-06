@@ -1,6 +1,6 @@
 # Voegt nieuwe en bestaande issues toe aan het HGV project board.
-# Project: https://github.com/orgs/Sportvereniging-H-G-V/projects/3
-# Voor org-projects: voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
+# Project: https://github.com/orgs/Sportvereniging-H-G-V/teams/development/projects (team: development, project 3).
+# Voor org/team-projects: voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
 
 name: Add issues to project board
 
@@ -25,11 +25,12 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+              `query($org: String!, $slug: String!, $num: Int!) { organization(login: $org) { team(slug: $slug) { projectV2(number: $num) { id } } } }`,
+              { org: 'Sportvereniging-H-G-V', slug: 'development', num: 3 }
             );
-            const projectId = r?.organization?.projectV2?.id;
+            const projectId = r?.organization?.team?.projectV2?.id;
             if (!projectId) {
-              console.log('::warning::Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
+              console.log('::warning::Kon project niet vinden (org: Sportvereniging-H-G-V, team: development, number: 3).');
               return;
             }
             const contentId = context.payload.issue.node_id;
@@ -50,11 +51,12 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+              `query($org: String!, $slug: String!, $num: Int!) { organization(login: $org) { team(slug: $slug) { projectV2(number: $num) { id } } } }`,
+              { org: 'Sportvereniging-H-G-V', slug: 'development', num: 3 }
             );
-            const projectId = r?.organization?.projectV2?.id;
+            const projectId = r?.organization?.team?.projectV2?.id;
             if (!projectId) {
-              throw new Error('Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
+              throw new Error('Kon project niet vinden (org: Sportvereniging-H-G-V, team: development, number: 3).');
             }
             const { data } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
