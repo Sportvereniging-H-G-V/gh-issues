@@ -104,13 +104,20 @@ export async function listIssues(env, fullRepo) {
   )) || [];
 
   const onlyIssues = issues.filter((i) => !i.pull_request);
-  return onlyIssues.map((i) => ({
-    number: i.number,
-    title: i.title,
-    state: i.state,
-    url: i.html_url,
-    createdAt: i.created_at,
-  }));
+  const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  return onlyIssues
+    .filter((i) => {
+      if (i.state !== 'closed') return true;
+      if (!i.closed_at) return true;
+      return new Date(i.closed_at).getTime() > twoWeeksAgo;
+    })
+    .map((i) => ({
+      number: i.number,
+      title: i.title,
+      state: i.state,
+      url: i.html_url,
+      createdAt: i.created_at,
+    }));
 }
 
 export async function createIssue(env, fullRepo, payload) {
