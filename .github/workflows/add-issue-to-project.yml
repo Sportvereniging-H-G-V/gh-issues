@@ -1,0 +1,86 @@
+# Voegt nieuwe en bestaande issues toe aan een GitHub Project (v2) board.
+#
+# Configuratie:
+# - Repository/Organization variable: PROJECT_BOARD_ID (GraphQL node ID van het project, bijv. PVT_xxx)
+#   → Te vinden via: GitHub Project → ... → Settings → onderaan "Project ID", of via GraphQL.
+# - Voor organization projects: voeg een secret PROJECT_TOKEN toe (PAT met scope "project").
+#   GITHUB_TOKEN heeft standaard geen project-rechten op org-niveau.
+
+name: Add issues to project board
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  add-to-project:
+    name: Add issue(s) to project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add single issue (triggered by issue event)
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const projectId = process.env.PROJECT_BOARD_ID;
+            if (!projectId) {
+              console.log('::warning::PROJECT_BOARD_ID is niet gezet. Stel een repository of organization variable in.');
+              return;
+            }
+            const contentId = context.payload.issue.node_id;
+            const result = await github.graphql(
+              `mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                  item { id }
+                }
+              }`,
+              { projectId, contentId }
+            );
+            console.log('Issue toegevoegd aan project:', result?.addProjectV2ItemById?.item?.id || 'ok');
+        env:
+          PROJECT_BOARD_ID: ${{ vars.PROJECT_BOARD_ID }}
+
+      - name: Add all open issues (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const projectId = process.env.PROJECT_BOARD_ID;
+            if (!projectId) {
+              throw new Error('PROJECT_BOARD_ID is niet gezet. Stel een repository of organization variable in.');
+            }
+            const { data } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const issues = data.filter(i => !i.pull_request);
+            console.log(`Gevonden: ${issues.length} open issue(s).`);
+            for (const issue of issues) {
+              try {
+                await github.graphql(
+                  `mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                      item { id }
+                    }
+                  }`,
+                  { projectId, contentId: issue.node_id }
+                );
+                console.log(`Toegevoegd: #${issue.number} ${issue.title}`);
+              } catch (err) {
+                if (err.message?.includes('already exists') || err.errors?.[0]?.message?.includes('already'))
+                  console.log(`Al in project: #${issue.number}`);
+                else
+                  console.warn(`Fout bij #${issue.number}:`, err.message);
+              }
+            }
+        env:
+          PROJECT_BOARD_ID: ${{ vars.PROJECT_BOARD_ID }}
