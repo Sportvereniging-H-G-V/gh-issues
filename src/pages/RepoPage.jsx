@@ -5,9 +5,21 @@ import SectionDivider from '../components/SectionDivider';
 import { fetchRepos, fetchTemplates, fetchIssues, createIssue } from '../api';
 
 const TEMPLATE_META = {
-  'content-wijziging': { emoji: '✏️', accent: '#FF5200' },
-  'technisch-probleem': { emoji: '🐛', accent: '#FF3535' },
-  'nieuwe-functie': { emoji: '✨', accent: '#4080FF' },
+  'content-wijziging': {
+    emoji: '✏️',
+    accent: '#FF5200',
+    hint: 'Kies bij wijziging van teksten of afbeeldingen op de site',
+  },
+  'technisch-probleem': {
+    emoji: '🐛',
+    accent: '#FF3535',
+    hint: 'Kies bij een fout, bug of iets dat niet werkt',
+  },
+  'nieuwe-functie': {
+    emoji: '✨',
+    accent: '#4080FF',
+    hint: 'Kies wanneer je een nieuwe functie of verbetering wilt voorstellen',
+  },
 };
 
 function formatDate(s) {
@@ -59,7 +71,7 @@ export default function RepoPage() {
     setActiveTemplate(t);
     setMessage(null);
     if (titleRef.current) {
-      titleRef.current.value = t.titlePrefix || '';
+      titleRef.current.value = '';
     }
   }
 
@@ -84,7 +96,7 @@ export default function RepoPage() {
       if (activeTemplate) payload.templateId = activeTemplate.id;
       const data = await createIssue(payload);
       setMessage({ type: 'success', text: 'Issue aangemaakt.', url: data.url });
-      if (titleRef.current) titleRef.current.value = activeTemplate?.titlePrefix || '';
+      if (titleRef.current) titleRef.current.value = '';
       if (sectionsRef.current) sectionsRef.current.querySelectorAll('textarea').forEach((ta) => { ta.value = ''; });
       loadIssues();
     } catch (err) {
@@ -126,7 +138,7 @@ export default function RepoPage() {
               >
                 <span className="tc-icon" aria-hidden="true">{meta.emoji}</span>
                 <span className="name">{t.name}</span>
-                <span className="hint">{t.titlePrefix || 'Nieuwe melding insturen'}</span>
+                <span className="hint">{meta.hint || 'Nieuwe melding insturen'}</span>
               </div>
             );
           })}
@@ -142,8 +154,8 @@ export default function RepoPage() {
                   id="title"
                   ref={titleRef}
                   required
-                  placeholder={activeTemplate.titlePrefix ? `${activeTemplate.titlePrefix}…` : 'Korte beschrijving'}
-                  defaultValue={activeTemplate.titlePrefix || ''}
+                  placeholder="Korte beschrijving"
+                  defaultValue=""
                 />
               </div>
               <div ref={sectionsRef}>
