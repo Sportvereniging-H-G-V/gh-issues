@@ -1,0 +1,84 @@
+# Voegt nieuwe en bestaande issues toe aan het HGV project board.
+# Project: https://github.com/orgs/Sportvereniging-H-G-V/projects/3
+# Voor org-projects: voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
+
+name: Add issues to project board
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  add-to-project:
+    name: Add issue(s) to project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add single issue (triggered by issue event)
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const r = await github.graphql(
+              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+            );
+            const projectId = r?.organization?.projectV2?.id;
+            if (!projectId) {
+              console.log('::warning::Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
+              return;
+            }
+            const contentId = context.payload.issue.node_id;
+            const result = await github.graphql(
+              `mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                  item { id }
+                }
+              }`,
+              { projectId, contentId }
+            );
+            console.log('Issue toegevoegd aan project:', result?.addProjectV2ItemById?.item?.id || 'ok');
+
+      - name: Add all open issues (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const r = await github.graphql(
+              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+            );
+            const projectId = r?.organization?.projectV2?.id;
+            if (!projectId) {
+              throw new Error('Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
+            }
+            const { data } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const issues = data.filter(i => !i.pull_request);
+            console.log(`Gevonden: ${issues.length} open issue(s).`);
+            for (const issue of issues) {
+              try {
+                await github.graphql(
+                  `mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                      item { id }
+                    }
+                  }`,
+                  { projectId, contentId: issue.node_id }
+                );
+                console.log(`Toegevoegd: #${issue.number} ${issue.title}`);
+              } catch (err) {
+                if (err.message?.includes('already exists') || err.errors?.[0]?.message?.includes('already'))
+                  console.log(`Al in project: #${issue.number}`);
+                else
+                  console.warn(`Fout bij #${issue.number}:`, err.message);
+              }
+            }
