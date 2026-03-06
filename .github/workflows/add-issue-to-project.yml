@@ -1,10 +1,6 @@
-# Voegt nieuwe en bestaande issues toe aan een GitHub Project (v2) board.
-#
-# Configuratie:
-# - Repository/Organization variable: PROJECT_BOARD_ID (GraphQL node ID van het project, bijv. PVT_xxx)
-#   → Te vinden via: GitHub Project → ... → Settings → onderaan "Project ID", of via GraphQL.
-# - Voor organization projects: voeg een secret PROJECT_TOKEN toe (PAT met scope "project").
-#   GITHUB_TOKEN heeft standaard geen project-rechten op org-niveau.
+# Voegt nieuwe en bestaande issues toe aan het HGV project board.
+# Project: https://github.com/orgs/Sportvereniging-H-G-V/projects/3
+# Voor org-projects: voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
 
 name: Add issues to project board
 
@@ -28,9 +24,12 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const projectId = process.env.PROJECT_BOARD_ID;
+            const r = await github.graphql(
+              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+            );
+            const projectId = r?.organization?.projectV2?.id;
             if (!projectId) {
-              console.log('::warning::PROJECT_BOARD_ID is niet gezet. Stel een repository of organization variable in.');
+              console.log('::warning::Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
               return;
             }
             const contentId = context.payload.issue.node_id;
@@ -43,8 +42,6 @@ jobs:
               { projectId, contentId }
             );
             console.log('Issue toegevoegd aan project:', result?.addProjectV2ItemById?.item?.id || 'ok');
-        env:
-          PROJECT_BOARD_ID: ${{ vars.PROJECT_BOARD_ID }}
 
       - name: Add all open issues (manual run)
         if: github.event_name == 'workflow_dispatch'
@@ -52,9 +49,12 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const projectId = process.env.PROJECT_BOARD_ID;
+            const r = await github.graphql(
+              `query { organization(login: "Sportvereniging-H-G-V") { projectV2(number: 3) { id } } }`
+            );
+            const projectId = r?.organization?.projectV2?.id;
             if (!projectId) {
-              throw new Error('PROJECT_BOARD_ID is niet gezet. Stel een repository of organization variable in.');
+              throw new Error('Kon project niet vinden (org: Sportvereniging-H-G-V, number: 3).');
             }
             const { data } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -82,5 +82,3 @@ jobs:
                   console.warn(`Fout bij #${issue.number}:`, err.message);
               }
             }
-        env:
-          PROJECT_BOARD_ID: ${{ vars.PROJECT_BOARD_ID }}
