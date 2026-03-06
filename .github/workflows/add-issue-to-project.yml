@@ -25,12 +25,18 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query($org: String!, $slug: String!, $num: Int!) { organization(login: $org) { team(slug: $slug) { projectV2(number: $num) { id } } } }`,
-              { org: 'Sportvereniging-H-G-V', slug: 'development', num: 3 }
+              `query($org: String!, $slug: String!) { organization(login: $org) { team(slug: $slug) { projectsV2(first: 20) { nodes { id number title } } } } }`,
+              { org: 'Sportvereniging-H-G-V', slug: 'development' }
             );
-            const projectId = r?.organization?.team?.projectV2?.id;
+            const nodes = r?.organization?.team?.projectsV2?.nodes || [];
+            const project = nodes.find(p => p.number === 3) || nodes[0];
+            const projectId = project?.id;
             if (!projectId) {
-              console.log('::warning::Kon project niet vinden (org: Sportvereniging-H-G-V, team: development, number: 3).');
+              if (nodes.length === 0) {
+                console.log('::warning::Geen projecten gevonden voor team development. Zet secret PROJECT_TOKEN (PAT met scope project) en geef de token toegang tot het team-project.');
+              } else {
+                console.log('::warning::Geen project met number 3. Gevonden:', nodes.map(p => `#${p.number} ${p.title}`).join(', '));
+              }
               return;
             }
             const contentId = context.payload.issue.node_id;
@@ -51,12 +57,17 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query($org: String!, $slug: String!, $num: Int!) { organization(login: $org) { team(slug: $slug) { projectV2(number: $num) { id } } } }`,
-              { org: 'Sportvereniging-H-G-V', slug: 'development', num: 3 }
+              `query($org: String!, $slug: String!) { organization(login: $org) { team(slug: $slug) { projectsV2(first: 20) { nodes { id number title } } } } }`,
+              { org: 'Sportvereniging-H-G-V', slug: 'development' }
             );
-            const projectId = r?.organization?.team?.projectV2?.id;
+            const nodes = r?.organization?.team?.projectsV2?.nodes || [];
+            const project = nodes.find(p => p.number === 3) || nodes[0];
+            const projectId = project?.id;
             if (!projectId) {
-              throw new Error('Kon project niet vinden (org: Sportvereniging-H-G-V, team: development, number: 3).');
+              if (nodes.length === 0) {
+                throw new Error('Geen projecten gevonden voor team development. Zet secret PROJECT_TOKEN (PAT met scope project) en geef de token toegang tot het team-project.');
+              }
+              throw new Error('Geen project met number 3. Gevonden: ' + nodes.map(p => `#${p.number} ${p.title}`).join(', '));
             }
             const { data } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
