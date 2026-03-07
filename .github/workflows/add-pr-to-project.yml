@@ -1,6 +1,6 @@
 # Voegt nieuwe en bestaande pull requests toe aan het HGV project board.
-# Project: https://github.com/orgs/Sportvereniging-H-G-V/teams/development/projects (team: development, project 4).
-# Voor org/team-projects: voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
+# Project: https://github.com/orgs/Sportvereniging-H-G-V/projects/4 (org project 4).
+# Voeg secret PROJECT_TOKEN toe (PAT met scope "project") indien nodig.
 
 name: Add PRs to project board
 
@@ -25,18 +25,12 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query($org: String!, $slug: String!) { organization(login: $org) { team(slug: $slug) { projectsV2(first: 20) { nodes { id number title } } } } }`,
-              { org: 'Sportvereniging-H-G-V', slug: 'development' }
+              `query($org: String!, $number: Int!) { organization(login: $org) { projectV2(number: $number) { id title } } }`,
+              { org: 'Sportvereniging-H-G-V', number: 4 }
             );
-            const nodes = r?.organization?.team?.projectsV2?.nodes || [];
-            const project = nodes.find(p => p.number === 4) || nodes[0];
-            const projectId = project?.id;
+            const projectId = r?.organization?.projectV2?.id;
             if (!projectId) {
-              if (nodes.length === 0) {
-                console.log('::warning::Geen projecten gevonden voor team development. Zet secret PROJECT_TOKEN (PAT met scope project) en geef de token toegang tot het team-project.');
-              } else {
-                console.log('::warning::Geen project met number 4. Gevonden:', nodes.map(p => `#${p.number} ${p.title}`).join(', '));
-              }
+              console.log('::warning::Project 4 niet gevonden. Controleer of PROJECT_TOKEN (PAT met scope project) is ingesteld.');
               return;
             }
             const contentId = context.payload.pull_request.node_id;
@@ -57,17 +51,12 @@ jobs:
           github-token: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const r = await github.graphql(
-              `query($org: String!, $slug: String!) { organization(login: $org) { team(slug: $slug) { projectsV2(first: 20) { nodes { id number title } } } } }`,
-              { org: 'Sportvereniging-H-G-V', slug: 'development' }
+              `query($org: String!, $number: Int!) { organization(login: $org) { projectV2(number: $number) { id title } } }`,
+              { org: 'Sportvereniging-H-G-V', number: 4 }
             );
-            const nodes = r?.organization?.team?.projectsV2?.nodes || [];
-            const project = nodes.find(p => p.number === 4) || nodes[0];
-            const projectId = project?.id;
+            const projectId = r?.organization?.projectV2?.id;
             if (!projectId) {
-              if (nodes.length === 0) {
-                throw new Error('Geen projecten gevonden voor team development. Zet secret PROJECT_TOKEN (PAT met scope project) en geef de token toegang tot het team-project.');
-              }
-              throw new Error('Geen project met number 4. Gevonden: ' + nodes.map(p => `#${p.number} ${p.title}`).join(', '));
+              throw new Error('Project 4 niet gevonden. Controleer of PROJECT_TOKEN (PAT met scope project) is ingesteld.');
             }
             const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
