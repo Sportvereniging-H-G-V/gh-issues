@@ -9,11 +9,11 @@
   --text: #0F172A;
   --muted: #64748B;
   --muted-2: #475569;
-  --accent: #0284C7;
+  --accent: #1A9CD8;
   --accent-soft: #E0F2FE;
   --success: #059669;
   --error: #DC2626;
-  --ring: rgba(2, 132, 199, 0.2);
+  --ring: rgba(26, 156, 216, 0.2);
   --font-main: 'Nunito', system-ui, sans-serif;
   --font-display: 'Barlow Condensed', sans-serif;
   --font-accent: 'Barlow', sans-serif;
@@ -107,11 +107,11 @@ h1.display.small {
 
 .loading { color: var(--muted-2); font-size: 0.9rem; padding: 3rem 0; display: flex; align-items: center; gap: 0.75rem; justify-content: center; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loading::before { content: ''; width: 20px; height: 20px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite; flex-shrink: 0; }
+.loading::before { content: ''; display: var(--spinner-display, block); width: 20px; height: 20px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s cubic-bezier(0.4, 0, 0.2, 1) infinite; flex-shrink: 0; }
 .error-box { color: var(--error); font-size: 0.9rem; padding: 1rem 1.25rem; background: #FEF2F2; border: 1px solid #FEE2E2; border-radius: 8px; font-weight: 500; }
 
 /* Repo grid */
-.repo-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.repo-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .repo-card { 
   display: flex; 
@@ -161,7 +161,7 @@ h1.display.small {
 .repo-card:hover .repo-arrow { color: var(--accent); transform: translateX(4px); }
 
 /* Template cards */
-.templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
 .template-card { 
   background: var(--surface); 
   border: 1px solid var(--border); 
