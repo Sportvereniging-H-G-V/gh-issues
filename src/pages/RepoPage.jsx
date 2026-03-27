@@ -6,19 +6,31 @@ import { fetchRepos, fetchTemplates, fetchIssues, createIssue } from '../api';
 
 const TEMPLATE_META = {
   'content-wijziging': {
-    emoji: '✏️',
-    accent: '#FF5200',
-    hint: 'Kies bij wijziging van teksten of afbeeldingen op de site',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+    ),
+    accent: '#0284C7',
+    hint: 'Teksten, afbeeldingen of andere content op de pagina aanpassen',
   },
   'technisch-probleem': {
-    emoji: '🐛',
-    accent: '#FF3535',
-    hint: 'Kies bij een fout, bug of iets dat niet werkt',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.31 0-6-2.69-6-6v-1h12v1c0 3.31-2.69 6-6 6Z"/><path d="M12 11.12V12"/><path d="M16 11.12v1"/><path d="M8 11.12v1"/><path d="M18 13h1"/><path d="M18 17h1"/><path d="M23 15h-1"/><path d="M5 13H4"/><path d="M5 17H4"/><path d="M1 15h1"/>
+      </svg>
+    ),
+    accent: '#DC2626',
+    hint: 'Een foutmelding, kapot onderdeel of iets dat niet werkt zoals verwacht',
   },
   'nieuwe-functie': {
-    emoji: '✨',
-    accent: '#4080FF',
-    hint: 'Kies wanneer je een nieuwe functie of verbetering wilt voorstellen',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>
+      </svg>
+    ),
+    accent: '#059669',
+    hint: 'Een idee voor een nieuwe functie of verbetering aan de website of app',
   },
 };
 
@@ -117,7 +129,7 @@ export default function RepoPage() {
       <Nav backLink />
       <div className="container narrow">
         <div className="repo-header">
-          <div className="kicker">Website / applicatie</div>
+          <div className="kicker">Melding doen voor</div>
           <h1 className="display small">{repoInfo?.name || repo}</h1>
           {repoInfo?.description && <p className="repo-desc">{repoInfo.description}</p>}
         </div>
@@ -128,7 +140,14 @@ export default function RepoPage() {
           {!templates && !templatesError && <div className="loading">Templates laden…</div>}
           {templatesError && <p className="error-box">{templatesError}</p>}
           {templates && templates.map((t) => {
-            const meta = TEMPLATE_META[t.id] || { emoji: '📋', accent: '#1E40AF' };
+            const meta = TEMPLATE_META[t.id] || { 
+              icon: (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+                </svg>
+              ), 
+              accent: '#0284C7' 
+            };
             return (
               <div
                 key={t.id}
@@ -136,7 +155,9 @@ export default function RepoPage() {
                 style={{ '--card-accent': meta.accent }}
                 onClick={() => selectTemplate(t)}
               >
-                <span className="tc-icon" aria-hidden="true">{meta.emoji}</span>
+                <span className="tc-icon" aria-hidden="true" style={{ color: meta.accent }}>
+                  {meta.icon}
+                </span>
                 <span className="name">{t.name}</span>
                 <span className="hint">{meta.hint || 'Nieuwe melding insturen'}</span>
               </div>
@@ -173,7 +194,7 @@ export default function RepoPage() {
               </div>
               <div className="form-actions">
                 <button type="submit" className="primary" disabled={submitting}>
-                  Melding insturen
+                  {submitting ? 'Bezig met insturen…' : 'Melding insturen'}
                 </button>
               </div>
             </form>

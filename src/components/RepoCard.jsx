@@ -49,7 +49,11 @@ export default function RepoCard({ repo, index }) {
           <span className="name">{repo.name}</span>
           {repo.description && <span className="desc">{repo.description}</span>}
         </span>
-        <span className="repo-arrow" aria-hidden="true">›</span>
+        <span className="repo-arrow" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </span>
       </div>
     </Link>
   );

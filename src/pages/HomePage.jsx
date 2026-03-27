@@ -16,12 +16,12 @@ export default function HomePage() {
     <>
       <Nav />
       <div className="container">
-        <div style={{ marginBottom: '3.5rem' }}>
+        <div style={{ marginBottom: '4rem' }}>
           <div className="kicker">Sportvereniging H.G.V.</div>
           <h1 className="display">Website of app<br /><em>kiezen</em></h1>
           <p className="hero-body">
-            Kies hieronder de website of applicatie waarvoor je een melding wilt doen.
-            Je kunt bijvoorbeeld een fout doorgeven, een tekstwijziging aanvragen of een idee voor een verbetering insturen.
+            Selecteer hieronder het platform waarvoor je een melding wilt doen.
+            Of het nu gaat om een fout, een tekstwijziging of een nieuw idee: we horen het graag!
           </p>
         </div>
 
