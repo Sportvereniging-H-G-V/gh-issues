@@ -4,7 +4,6 @@ export const ORG = 'Sportvereniging-H-G-V';
 export const REPO_ALLOWLIST = [
   'hgvhengelo',
   'apenkooitoernooi',
-  'hgv-signing',
   'presentielijst-generator',
   'dansstudiohengelo',
   'turnenhengelo',

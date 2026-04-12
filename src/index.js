@@ -1,108 +1,92 @@
-import { ORG } from './config';
-import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github';
-import { getTemplates } from './templates';
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { ORG } from './config.js';
+import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github.js';
+import { getTemplates } from './templates.js';
 
-import indexHtml from '../dist/index.html';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// env-object leest GITHUB_TOKEN uit process.env
+const env = { get GITHUB_TOKEN() { return process.env.GITHUB_TOKEN; } };
 
-function html() {
-  return new Response(indexHtml, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8' },
-  });
-}
+app.use(express.json());
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const path = url.pathname;
+// GET /api/repos
+app.get('/api/repos', async (_req, res) => {
+  try {
+    res.json(await listRepos(env));
+  } catch {
+    res.status(500).json({ error: 'Kon repos niet ophalen' });
+  }
+});
 
-    // API: GET /api/repos
-    if (path === '/api/repos' && request.method === 'GET') {
-      try {
-        return json(await listRepos(env));
-      } catch {
-        return json({ error: 'Kon repos niet ophalen' }, 500);
-      }
+// GET /api/templates
+app.get('/api/templates', (_req, res) => {
+  try {
+    res.json(getTemplates());
+  } catch {
+    res.status(500).json({ error: 'Templates laden mislukt' });
+  }
+});
+
+// POST /api/issues
+app.post('/api/issues', async (req, res) => {
+  const { repo, title, body: issueBody, labels, assignees, templateId } = req.body || {};
+
+  if (!repo || !title) {
+    return res.status(400).json({ error: 'repo en title zijn verplicht' });
+  }
+
+  const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
+
+  try {
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({ error: 'Issues aanmaken in deze repository is niet toegestaan' });
     }
 
-    // API: GET /api/templates
-    if (path === '/api/templates' && request.method === 'GET') {
-      try {
-        return json(getTemplates());
-      } catch {
-        return json({ error: 'Templates laden mislukt' }, 500);
-      }
+    let effectiveLabels = Array.isArray(labels) ? labels.slice() : [];
+    if (effectiveLabels.length === 0 && templateId) {
+      const defaults = defaultLabelsForTemplateId(templateId);
+      if (defaults && defaults.length) effectiveLabels = defaults;
     }
 
-    // API: POST /api/issues
-    if (path === '/api/issues' && request.method === 'POST') {
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        body = {};
-      }
+    const payload = { title, body: issueBody || '' };
+    if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
+    if (Array.isArray(assignees) && assignees.length > 0) payload.assignees = assignees;
 
-      const { repo, title, body: issueBody, labels, assignees, templateId } = body;
+    const issue = await createIssue(env, fullRepo, payload);
+    res.json({ ok: true, url: issue.html_url, number: issue.number, issue });
+  } catch {
+    res.status(500).json({ error: 'Issue aanmaken mislukt' });
+  }
+});
 
-      if (!repo || !title) {
-        return json({ error: 'repo en title zijn verplicht' }, 400);
-      }
+// GET /api/repos/:repo/issues
+app.get('/api/repos/:repo/issues', async (req, res) => {
+  const repo = decodeURIComponent(req.params.repo);
+  const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
 
-      const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
-
-      try {
-        if (!isRepoAllowed(fullRepo)) {
-          return json({ error: 'Issues aanmaken in deze repository is niet toegestaan' }, 403);
-        }
-
-        let effectiveLabels = Array.isArray(labels) ? labels.slice() : [];
-        if (effectiveLabels.length === 0 && templateId) {
-          const defaults = defaultLabelsForTemplateId(templateId);
-          if (defaults && defaults.length) {
-            effectiveLabels = defaults;
-          }
-        }
-
-        const payload = { title, body: issueBody || '' };
-        if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
-        if (Array.isArray(assignees) && assignees.length > 0) payload.assignees = assignees;
-
-        const issue = await createIssue(env, fullRepo, payload);
-        return json({ ok: true, url: issue.html_url, number: issue.number, issue });
-      } catch {
-        return json({ error: 'Issue aanmaken mislukt' }, 500);
-      }
+  try {
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({ error: 'Toegang tot deze repository is niet toegestaan' });
     }
+    res.json(await listIssues(env, fullRepo));
+  } catch {
+    res.status(500).json({ error: 'Issues ophalen mislukt' });
+  }
+});
 
-    // API: GET /api/repos/:repo/issues
-    const repoIssuesMatch = path.match(/^\/api\/repos\/([^\/]+)\/issues$/);
-    if (repoIssuesMatch && request.method === 'GET') {
-      const repo = decodeURIComponent(repoIssuesMatch[1]);
-      const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
+// Statische bestanden uit de Vite build
+app.use(express.static(join(__dirname, '../dist')));
 
-      try {
-        if (!isRepoAllowed(fullRepo)) {
-          return json({ error: 'Toegang tot deze repository is niet toegestaan' }, 403);
-        }
-        return json(await listIssues(env, fullRepo));
-      } catch {
-        return json({ error: 'Issues ophalen mislukt' }, 500);
-      }
-    }
+// SPA fallback
+app.get('*', (_req, res) => {
+  res.sendFile(join(__dirname, '../dist/index.html'));
+});
 
-    // Static assets (js, css, images, etc.)
-    if (path.includes('.')) {
-      return env.ASSETS.fetch(request);
-    }
-
-    // SPA fallback: serve index.html for all client-side routes
-    return html();
-  },
-};
+app.listen(PORT, () => {
+  console.log(`Server draait op poort ${PORT}`);
+});
