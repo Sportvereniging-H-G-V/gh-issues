@@ -11,13 +11,13 @@
     "dev:server": "npm run build && node src/index.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "express": "^5.2.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
-    "vite": "^8.0.5"
+    "vite": "^8.0.8"
   }
 }
