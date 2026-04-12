@@ -91,10 +91,10 @@ export default function RepoPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage(null);
-    const reporterName = nameRef.current?.value.trim();
+    const reporterName = nameRef.current?.value?.trim();
     if (!reporterName) return;
 
-    const title = titleRef.current?.value.trim();
+    const title = titleRef.current?.value?.trim();
     if (!title) return;
 
     const parts = [`## Melder\n\n${reporterName}`];
