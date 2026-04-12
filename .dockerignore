@@ -1,0 +1,9 @@
+# Voorkom dat gevoelige of overbodige bestanden in de Docker-build-context belanden
+.git
+.gitignore
+.env
+.env.*
+node_modules
+npm-debug.log*
+dist
+.DS_Store

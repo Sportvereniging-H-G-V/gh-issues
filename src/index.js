@@ -1,151 +1,138 @@
-import { ORG } from './config';
-import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github';
-import { getTemplates } from './templates';
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { ORG } from './config.js';
+import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github.js';
+import { getTemplates } from './templates.js';
 
-import indexHtml from '../dist/index.html';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const app = express();
+// Eén reverse-proxy-hop (Coolify/nginx): X-Forwarded-* voor protocol/host
+app.set('trust proxy', 1);
+const PORT = process.env.PORT || 3000;
 
-const SECURITY_HEADERS = {
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-};
+// env-object leest GITHUB_TOKEN uit process.env
+const env = { get GITHUB_TOKEN() { return process.env.GITHUB_TOKEN; } };
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      ...SECURITY_HEADERS,
-    },
+// Security headers op alle responses
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   });
-}
+  next();
+});
 
-function html() {
-  return new Response(indexHtml, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Security-Policy':
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'",
-      ...SECURITY_HEADERS,
-    },
-  });
-}
+app.use(express.json());
 
-// Reject requests where the Origin header doesn't match the app's own origin.
-// Browsers always send Origin on cross-site POST requests, so this stops CSRF.
-function validateOrigin(request) {
-  const origin = request.headers.get('origin');
-  if (!origin) return null; // non-browser / same-origin request without Origin header
-  const requestOrigin = new URL(request.url).origin;
+// CSRF-bescherming: blokkeer cross-origin POST-verzoeken op basis van de Origin header.
+function validateOrigin(req, res) {
+  const origin = req.headers['origin'];
+  if (!origin) return false; // geen browser / same-origin zonder Origin header
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
   if (origin !== requestOrigin) {
-    return json({ error: 'Forbidden' }, 403);
+    res.status(403).json({ error: 'Forbidden' });
+    return true;
   }
-  return null;
+  return false;
 }
 
-const STATIC_EXT = /\.(js|css|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|map|txt|json)$/i;
+// GET /api/repos
+app.get('/api/repos', async (_req, res) => {
+  try {
+    res.json(await listRepos(env));
+  } catch {
+    res.status(500).json({ error: 'Kon repos niet ophalen' });
+  }
+});
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const path = url.pathname;
+// GET /api/templates
+app.get('/api/templates', (_req, res) => {
+  try {
+    res.json(getTemplates());
+  } catch {
+    res.status(500).json({ error: 'Templates laden mislukt' });
+  }
+});
 
-    // API: GET /api/repos
-    if (path === '/api/repos' && request.method === 'GET') {
-      try {
-        return json(await listRepos(env));
-      } catch {
-        return json({ error: 'Kon repos niet ophalen' }, 500);
-      }
+// POST /api/issues
+app.post('/api/issues', async (req, res) => {
+  if (validateOrigin(req, res)) return;
+
+  const { repo, title, body: issueBody, labels, assignees, templateId } = req.body || {};
+
+  // Input validatie
+  if (typeof repo !== 'string' || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(repo.trim())) {
+    return res.status(400).json({ error: 'Ongeldige repository naam' });
+  }
+  if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
+    return res.status(400).json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' });
+  }
+
+  const safeBody = typeof issueBody === 'string' ? issueBody.slice(0, 65_536) : '';
+  const safeLabels = Array.isArray(labels)
+    ? labels.filter((l) => typeof l === 'string' && l.length > 0 && l.length <= 100)
+    : [];
+  const safeAssignees = Array.isArray(assignees)
+    ? assignees.filter((a) => typeof a === 'string' && /^[\w\-]{1,100}$/.test(a))
+    : [];
+
+  const fullRepo = repo.trim().includes('/') ? repo.trim() : `${ORG}/${repo.trim()}`;
+
+  try {
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({ error: 'Issues aanmaken in deze repository is niet toegestaan' });
     }
 
-    // API: GET /api/templates
-    if (path === '/api/templates' && request.method === 'GET') {
-      try {
-        return json(getTemplates());
-      } catch {
-        return json({ error: 'Templates laden mislukt' }, 500);
-      }
+    let effectiveLabels = safeLabels.slice();
+    if (effectiveLabels.length === 0 && templateId) {
+      const defaults = defaultLabelsForTemplateId(templateId);
+      if (defaults && defaults.length) effectiveLabels = defaults;
     }
 
-    // API: POST /api/issues
-    if (path === '/api/issues' && request.method === 'POST') {
-      const csrfError = validateOrigin(request);
-      if (csrfError) return csrfError;
+    const payload = { title: title.trim(), body: safeBody };
+    if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
+    if (safeAssignees.length > 0) payload.assignees = safeAssignees;
 
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        body = {};
-      }
+    const issue = await createIssue(env, fullRepo, payload);
+    res.json({ ok: true, url: issue.html_url, number: issue.number, issue });
+  } catch {
+    res.status(500).json({ error: 'Issue aanmaken mislukt' });
+  }
+});
 
-      const { repo, title, body: issueBody, labels, assignees, templateId } = body;
+// GET /api/repos/:repo/issues
+app.get('/api/repos/:repo/issues', async (req, res) => {
+  try {
+    const repo = decodeURIComponent(req.params.repo);
+    const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
 
-      // --- input validation ---
-      if (typeof repo !== 'string' || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(repo.trim())) {
-        return json({ error: 'Ongeldige repository naam' }, 400);
-      }
-      if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
-        return json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' }, 400);
-      }
-      const safeBody = typeof issueBody === 'string' ? issueBody.slice(0, 65_536) : '';
-      const safeLabels = Array.isArray(labels)
-        ? labels.filter((l) => typeof l === 'string' && l.length > 0 && l.length <= 100)
-        : [];
-      const safeAssignees = Array.isArray(assignees)
-        ? assignees.filter((a) => typeof a === 'string' && /^[\w\-]{1,100}$/.test(a))
-        : [];
-
-      const fullRepo = repo.trim().includes('/') ? repo.trim() : `${ORG}/${repo.trim()}`;
-
-      try {
-        if (!isRepoAllowed(fullRepo)) {
-          return json({ error: 'Issues aanmaken in deze repository is niet toegestaan' }, 403);
-        }
-
-        let effectiveLabels = safeLabels.slice();
-        if (effectiveLabels.length === 0 && templateId) {
-          const defaults = defaultLabelsForTemplateId(templateId);
-          if (defaults && defaults.length) {
-            effectiveLabels = defaults;
-          }
-        }
-
-        const payload = { title: title.trim(), body: safeBody };
-        if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
-        if (safeAssignees.length > 0) payload.assignees = safeAssignees;
-
-        const issue = await createIssue(env, fullRepo, payload);
-        return json({ ok: true, url: issue.html_url, number: issue.number, issue });
-      } catch {
-        return json({ error: 'Issue aanmaken mislukt' }, 500);
-      }
+    if (!isRepoAllowed(fullRepo)) {
+      return res.status(403).json({ error: 'Toegang tot deze repository is niet toegestaan' });
     }
-
-    // API: GET /api/repos/:repo/issues
-    const repoIssuesMatch = path.match(/^\/api\/repos\/([^\/]+)\/issues$/);
-    if (repoIssuesMatch && request.method === 'GET') {
-      const repo = decodeURIComponent(repoIssuesMatch[1]);
-      const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
-
-      try {
-        if (!isRepoAllowed(fullRepo)) {
-          return json({ error: 'Toegang tot deze repository is niet toegestaan' }, 403);
-        }
-        return json(await listIssues(env, fullRepo));
-      } catch {
-        return json({ error: 'Issues ophalen mislukt' }, 500);
-      }
+    res.json(await listIssues(env, fullRepo));
+  } catch (err) {
+    if (err instanceof URIError) {
+      return res.status(400).json({ error: 'Ongeldige repository-parameter' });
     }
+    res.status(500).json({ error: 'Issues ophalen mislukt' });
+  }
+});
 
-    // Static assets (js, css, images, etc.)
-    if (STATIC_EXT.test(path)) {
-      return env.ASSETS.fetch(request);
-    }
+// Statische bestanden uit de Vite build
+app.use(express.static(join(__dirname, '../dist')));
 
-    // SPA fallback: serve index.html for all client-side routes
-    return html();
-  },
-};
+// SPA fallback — stuur ook de CSP mee voor HTML
+app.get('*', (_req, res) => {
+  res.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"
+  );
+  res.sendFile(join(__dirname, '../dist/index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`Server draait op poort ${PORT}`);
+});
