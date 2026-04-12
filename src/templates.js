@@ -1,4 +1,4 @@
-import { ORG } from './config';
+import { ORG } from './config.js';
 
 function parseTemplateSections(body) {
   const sections = [];

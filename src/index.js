@@ -7,6 +7,8 @@ import { getTemplates } from './templates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
+// Eén reverse-proxy-hop (Coolify/nginx): X-Forwarded-* voor protocol/host
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // env-object leest GITHUB_TOKEN uit process.env
