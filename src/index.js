@@ -12,7 +12,30 @@ const PORT = process.env.PORT || 3000;
 // env-object leest GITHUB_TOKEN uit process.env
 const env = { get GITHUB_TOKEN() { return process.env.GITHUB_TOKEN; } };
 
+// Security headers op alle responses
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  });
+  next();
+});
+
 app.use(express.json());
+
+// CSRF-bescherming: blokkeer cross-origin POST-verzoeken op basis van de Origin header.
+function validateOrigin(req, res) {
+  const origin = req.headers['origin'];
+  if (!origin) return false; // geen browser / same-origin zonder Origin header
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
+  if (origin !== requestOrigin) {
+    res.status(403).json({ error: 'Forbidden' });
+    return true;
+  }
+  return false;
+}
 
 // GET /api/repos
 app.get('/api/repos', async (_req, res) => {
@@ -34,28 +57,42 @@ app.get('/api/templates', (_req, res) => {
 
 // POST /api/issues
 app.post('/api/issues', async (req, res) => {
+  if (validateOrigin(req, res)) return;
+
   const { repo, title, body: issueBody, labels, assignees, templateId } = req.body || {};
 
-  if (!repo || !title) {
-    return res.status(400).json({ error: 'repo en title zijn verplicht' });
+  // Input validatie
+  if (typeof repo !== 'string' || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(repo.trim())) {
+    return res.status(400).json({ error: 'Ongeldige repository naam' });
+  }
+  if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
+    return res.status(400).json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' });
   }
 
-  const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
+  const safeBody = typeof issueBody === 'string' ? issueBody.slice(0, 65_536) : '';
+  const safeLabels = Array.isArray(labels)
+    ? labels.filter((l) => typeof l === 'string' && l.length > 0 && l.length <= 100)
+    : [];
+  const safeAssignees = Array.isArray(assignees)
+    ? assignees.filter((a) => typeof a === 'string' && /^[\w\-]{1,100}$/.test(a))
+    : [];
+
+  const fullRepo = repo.trim().includes('/') ? repo.trim() : `${ORG}/${repo.trim()}`;
 
   try {
     if (!isRepoAllowed(fullRepo)) {
       return res.status(403).json({ error: 'Issues aanmaken in deze repository is niet toegestaan' });
     }
 
-    let effectiveLabels = Array.isArray(labels) ? labels.slice() : [];
+    let effectiveLabels = safeLabels.slice();
     if (effectiveLabels.length === 0 && templateId) {
       const defaults = defaultLabelsForTemplateId(templateId);
       if (defaults && defaults.length) effectiveLabels = defaults;
     }
 
-    const payload = { title, body: issueBody || '' };
+    const payload = { title: title.trim(), body: safeBody };
     if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
-    if (Array.isArray(assignees) && assignees.length > 0) payload.assignees = assignees;
+    if (safeAssignees.length > 0) payload.assignees = safeAssignees;
 
     const issue = await createIssue(env, fullRepo, payload);
     res.json({ ok: true, url: issue.html_url, number: issue.number, issue });
@@ -82,8 +119,12 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
 // Statische bestanden uit de Vite build
 app.use(express.static(join(__dirname, '../dist')));
 
-// SPA fallback
+// SPA fallback — stuur ook de CSP mee voor HTML
 app.get('*', (_req, res) => {
+  res.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"
+  );
   res.sendFile(join(__dirname, '../dist/index.html'));
 });
 

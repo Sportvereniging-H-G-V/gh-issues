@@ -25,7 +25,12 @@ jobs:
 
       - name: Install Cursor CLI
         run: |
-          curl https://cursor.com/install -fsS | bash
+          curl -fsSL https://cursor.com/install -o /tmp/install-cursor.sh
+          # Review the downloaded script before executing it.
+          # To pin a specific version, replace the URL with a versioned endpoint
+          # and verify the SHA-256 checksum:
+          #   echo "EXPECTED_HASH  /tmp/install-cursor.sh" | sha256sum --check
+          bash /tmp/install-cursor.sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure git identity

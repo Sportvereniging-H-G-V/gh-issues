@@ -10,7 +10,8 @@ export function isRepoAllowed(repoIdentifier) {
 
   const trimmed = repoIdentifier.trim();
   const fullName = trimmed.includes('/') ? trimmed : `${ORG}/${trimmed}`;
-  const shortName = trimmed.includes('/') ? trimmed.split('/')[1] : trimmed;
+  const match = trimmed.match(/^[^/]+\/([^/]+)$/);
+  const shortName = match ? match[1] : trimmed;
 
   return (
     REPO_ALLOWLIST.includes(shortName) ||
@@ -29,6 +30,14 @@ export function defaultLabelsForTemplateId(id) {
     default:
       return [];
   }
+}
+
+function parseFullRepo(fullRepo) {
+  const parts = fullRepo.split('/');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error('Ongeldige repository-indeling: verwacht "eigenaar/naam"');
+  }
+  return parts;
 }
 
 async function githubRequest(env, method, apiPath, body) {
@@ -59,8 +68,15 @@ async function githubRequest(env, method, apiPath, body) {
   }
 
   if (!res.ok) {
-    const msg = data && data.message ? data.message : text || `status ${res.status}`;
-    throw new Error(msg);
+    console.error('[GitHub API]', res.status, typeof data === 'object' ? JSON.stringify(data) : data);
+    const userMsg =
+      res.status === 401 ? 'Authenticatie mislukt' :
+      res.status === 403 ? 'Toegang geweigerd' :
+      res.status === 404 ? 'Niet gevonden' :
+      res.status === 422 ? 'Ongeldige invoer' :
+      res.status >= 500 ? 'GitHub serverfout' :
+      'Verzoek mislukt';
+    throw new Error(userMsg);
   }
 
   return data;
@@ -94,7 +110,7 @@ export async function listRepos(env) {
 }
 
 export async function listIssues(env, fullRepo) {
-  const [owner, repoName] = fullRepo.split('/');
+  const [owner, repoName] = parseFullRepo(fullRepo);
   const issues = (await githubRequest(
     env,
     'GET',
@@ -121,7 +137,7 @@ export async function listIssues(env, fullRepo) {
 }
 
 export async function createIssue(env, fullRepo, payload) {
-  const [owner, repoName] = fullRepo.split('/');
+  const [owner, repoName] = parseFullRepo(fullRepo);
   return githubRequest(
     env,
     'POST',
