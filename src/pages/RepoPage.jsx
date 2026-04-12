@@ -53,6 +53,7 @@ export default function RepoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
+  const nameRef = useRef();
   const titleRef = useRef();
   const sectionsRef = useRef();
 
@@ -90,10 +91,13 @@ export default function RepoPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage(null);
+    const reporterName = nameRef.current?.value.trim();
+    if (!reporterName) return;
+
     const title = titleRef.current?.value.trim();
     if (!title) return;
 
-    const parts = [];
+    const parts = [`## Melder\n\n${reporterName}`];
     if (sectionsRef.current) {
       sectionsRef.current.querySelectorAll('textarea').forEach((ta) => {
         const heading = ta.getAttribute('data-heading');
@@ -108,6 +112,7 @@ export default function RepoPage() {
       if (activeTemplate) payload.templateId = activeTemplate.id;
       const data = await createIssue(payload);
       setMessage({ type: 'success', text: 'Issue aangemaakt.', url: data.url });
+      if (nameRef.current) nameRef.current.value = '';
       if (titleRef.current) titleRef.current.value = '';
       if (sectionsRef.current) sectionsRef.current.querySelectorAll('textarea').forEach((ta) => { ta.value = ''; });
       loadIssues();
@@ -168,6 +173,19 @@ export default function RepoPage() {
         {activeTemplate && (
           <div className="form-panel">
             <form onSubmit={handleSubmit}>
+              <div className="form-section">
+                <label htmlFor="reporter-name">Uw naam</label>
+                <input
+                  type="text"
+                  id="reporter-name"
+                  ref={nameRef}
+                  name="reporter-name"
+                  autoComplete="name"
+                  required
+                  placeholder="Voor- en achternaam"
+                  defaultValue=""
+                />
+              </div>
               <div className="form-section">
                 <label htmlFor="title">Titel</label>
                 <input
