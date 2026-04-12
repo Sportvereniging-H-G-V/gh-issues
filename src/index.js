@@ -105,15 +105,18 @@ app.post('/api/issues', async (req, res) => {
 
 // GET /api/repos/:repo/issues
 app.get('/api/repos/:repo/issues', async (req, res) => {
-  const repo = decodeURIComponent(req.params.repo);
-  const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
-
   try {
+    const repo = decodeURIComponent(req.params.repo);
+    const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
+
     if (!isRepoAllowed(fullRepo)) {
       return res.status(403).json({ error: 'Toegang tot deze repository is niet toegestaan' });
     }
     res.json(await listIssues(env, fullRepo));
-  } catch {
+  } catch (err) {
+    if (err instanceof URIError) {
+      return res.status(400).json({ error: 'Ongeldige repository-parameter' });
+    }
     res.status(500).json({ error: 'Issues ophalen mislukt' });
   }
 });
