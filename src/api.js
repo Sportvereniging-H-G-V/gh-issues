@@ -10,8 +10,9 @@ export async function fetchTemplates() {
   return res.json();
 }
 
-export async function fetchIssues(repo) {
-  const res = await fetch(`/api/repos/${encodeURIComponent(repo)}/issues`);
+export async function fetchIssues(repo, { recentClosed = false } = {}) {
+  const q = recentClosed ? '?recentClosed=1' : '';
+  const res = await fetch(`/api/repos/${encodeURIComponent(repo)}/issues${q}`);
   if (!res.ok) throw new Error((await res.json()).error || 'Issues ophalen mislukt');
   return res.json();
 }

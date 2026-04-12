@@ -246,6 +246,9 @@ button.primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
 /* Issues */
 .issues-section { margin-top: 3rem; }
+.issues-filter { margin: -0.25rem 0 1.25rem; }
+.issues-filter-label { display: inline-flex; align-items: center; gap: 0.65rem; font-size: 0.9rem; color: var(--muted); cursor: pointer; font-weight: 500; line-height: 1.4; }
+.issues-filter-label input { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 .issue-item { display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; transition: background 0.2s ease; }
 .issue-item:hover { background: rgba(0,0,0,0.01); }
 .issue-item:last-child { border-bottom: none; }
