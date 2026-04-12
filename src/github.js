@@ -109,16 +109,32 @@ export async function listRepos(env) {
   return mapped;
 }
 
-export async function listIssues(env, fullRepo) {
-  const [owner, repoName] = parseFullRepo(fullRepo);
-  const issues = (await githubRequest(
-    env,
-    'GET',
-    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
-      repoName
-    )}/issues?state=all&per_page=50`
-  )) || [];
+function mapIssueRow(i) {
+  return {
+    number: i.number,
+    title: i.title,
+    state: i.state,
+    url: i.html_url,
+    createdAt: i.created_at,
+  };
+}
 
+/**
+ * @param {{ recentClosed?: boolean }} [options]
+ *   recentClosed=false (standaard): alleen open issues (geen pull requests).
+ *   recentClosed=true: open + gesloten binnen de laatste 14 dagen (oude weergave).
+ */
+export async function listIssues(env, fullRepo, { recentClosed = false } = {}) {
+  const [owner, repoName] = parseFullRepo(fullRepo);
+  const base = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/issues`;
+
+  if (!recentClosed) {
+    const issues =
+      (await githubRequest(env, 'GET', `${base}?state=open&per_page=100`)) || [];
+    return issues.filter((i) => !i.pull_request).map(mapIssueRow);
+  }
+
+  const issues = (await githubRequest(env, 'GET', `${base}?state=all&per_page=50`)) || [];
   const onlyIssues = issues.filter((i) => !i.pull_request);
   const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
   return onlyIssues
@@ -127,13 +143,7 @@ export async function listIssues(env, fullRepo) {
       if (!i.closed_at) return true;
       return new Date(i.closed_at).getTime() > twoWeeksAgo;
     })
-    .map((i) => ({
-      number: i.number,
-      title: i.title,
-      state: i.state,
-      url: i.html_url,
-      createdAt: i.created_at,
-    }));
+    .map(mapIssueRow);
 }
 
 export async function createIssue(env, fullRepo, payload) {

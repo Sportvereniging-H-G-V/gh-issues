@@ -50,6 +50,7 @@ export default function RepoPage() {
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [issues, setIssues] = useState(null);
   const [issuesError, setIssuesError] = useState(null);
+  const [showRecentClosed, setShowRecentClosed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -72,12 +73,27 @@ export default function RepoPage() {
   }, []);
 
   function loadIssues() {
-    fetchIssues(repo)
+    setIssuesError(null);
+    fetchIssues(repo, { recentClosed: showRecentClosed })
       .then(setIssues)
       .catch((e) => setIssuesError(e.message));
   }
 
-  useEffect(loadIssues, [repo]);
+  useEffect(() => {
+    setIssues(null);
+    setIssuesError(null);
+    let cancelled = false;
+    fetchIssues(repo, { recentClosed: showRecentClosed })
+      .then((data) => {
+        if (!cancelled) setIssues(data);
+      })
+      .catch((e) => {
+        if (!cancelled) setIssuesError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [repo, showRecentClosed]);
 
   function selectTemplate(t) {
     setActiveTemplate(t);
@@ -214,12 +230,24 @@ export default function RepoPage() {
 
         <div className="issues-section">
           <SectionDivider label="Bestaande meldingen" />
+          <div className="issues-filter">
+            <label className="issues-filter-label">
+              <input
+                type="checkbox"
+                checked={showRecentClosed}
+                onChange={(e) => setShowRecentClosed(e.target.checked)}
+              />
+              Toon ook recent gesloten meldingen (laatste 14 dagen)
+            </label>
+          </div>
           <div>
             {!issues && !issuesError && <div className="loading">Meldingen laden…</div>}
             {issuesError && <p className="error-box">{issuesError}</p>}
             {issues && issues.length === 0 && (
               <div className="loading" style={{ '--spinner-display': 'none' }}>
-                Er zijn nog geen meldingen voor deze website of app.
+                {showRecentClosed
+                  ? 'Er zijn nog geen meldingen voor deze website of app.'
+                  : 'Er zijn geen open meldingen. Vink hierboven aan om recent gesloten te tonen.'}
               </div>
             )}
             {issues && issues.map((issue) => (

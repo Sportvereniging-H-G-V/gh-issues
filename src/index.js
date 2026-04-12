@@ -112,7 +112,9 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
     if (!isRepoAllowed(fullRepo)) {
       return res.status(403).json({ error: 'Toegang tot deze repository is niet toegestaan' });
     }
-    res.json(await listIssues(env, fullRepo));
+    const rc = req.query.recentClosed;
+    const recentClosed = rc === '1' || String(rc).toLowerCase() === 'true';
+    res.json(await listIssues(env, fullRepo, { recentClosed }));
   } catch (err) {
     if (err instanceof URIError) {
       return res.status(400).json({ error: 'Ongeldige repository-parameter' });
