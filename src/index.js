@@ -126,8 +126,8 @@ app.get('/api/repos/:repo/issues', async (req, res) => {
 // Statische bestanden uit de Vite build
 app.use(express.static(join(__dirname, '../dist')));
 
-// SPA fallback — stuur ook de CSP mee voor HTML
-app.get('*', (_req, res) => {
+// SPA fallback — CSP mee op HTML; Express 5 accepteert geen `*` meer, gebruik `/{*splat}`
+app.get('/{*splat}', (_req, res) => {
   res.set(
     'Content-Security-Policy',
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"
