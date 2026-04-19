@@ -33,6 +33,13 @@ function validateOrigin(req, res) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const PROJECT_KEY_MAP = {
+  'hgv-hengelo':        '92e85457-9d5a-4c30-90d1-0f5876cd309a',
+  'dansstudio-hengelo': 'aeb3a292-5bab-4692-a354-5c646f35e33f',
+  'turnen-hengelo':     'c17e88ad-2306-4c05-8ab7-5824b078e3ec',
+  'apenkooitoernooi':   '016a748d-4858-4a20-b6cb-bc67b117847b',
+};
+
 function allowedCategoryIds() {
   return new Set(getTemplates().map((t) => t.id));
 }
@@ -46,11 +53,11 @@ app.get('/api/templates', (_req, res) => {
   }
 });
 
-// POST /api/issues — Paperclip-intake (body: title, body, email, category)
+// POST /api/issues — Paperclip-intake (body: title, body, email, category, projectKey)
 app.post('/api/issues', async (req, res) => {
   if (validateOrigin(req, res)) return;
 
-  const { title, body: issueBody, email, category } = req.body || {};
+  const { title, body: issueBody, email, category, projectKey } = req.body || {};
 
   if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
     return res.status(400).json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' });
@@ -65,12 +72,16 @@ app.post('/api/issues', async (req, res) => {
   if (typeof category !== 'string' || !allowedCategoryIds().has(category)) {
     return res.status(400).json({ error: 'Kies een geldige categorie' });
   }
+  if (typeof projectKey !== 'string' || !(projectKey in PROJECT_KEY_MAP)) {
+    return res.status(400).json({ error: 'Kies een geldig project' });
+  }
+
+  const resolvedProjectId = PROJECT_KEY_MAP[projectKey];
 
   const {
     PAPERCLIP_API_URL,
     PAPERCLIP_API_KEY,
     PAPERCLIP_COMPANY_ID,
-    PAPERCLIP_PROJECT_ID,
     PAPERCLIP_HELPDESK_AGENT_ID,
   } = process.env;
 
@@ -89,6 +100,7 @@ app.post('/api/issues', async (req, res) => {
     '',
     `**E-mail melder:** ${email.trim()}`,
     `**Categorie:** ${category}`,
+    `**Project:** ${projectKey}`,
   ].join('\n');
 
   try {
@@ -96,8 +108,8 @@ app.post('/api/issues', async (req, res) => {
       title: title.trim(),
       description,
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
+      projectId: resolvedProjectId,
     };
-    if (PAPERCLIP_PROJECT_ID) payload.projectId = PAPERCLIP_PROJECT_ID;
 
     const paperclipRes = await fetch(
       `${PAPERCLIP_API_URL}/api/companies/${PAPERCLIP_COMPANY_ID}/issues`,
