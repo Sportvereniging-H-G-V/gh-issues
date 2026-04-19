@@ -22,10 +22,7 @@ app.use(express.json());
 
 function validateOrigin(req, res) {
   const origin = req.headers['origin'];
-  if (!origin) {
-    res.status(403).json({ error: 'Forbidden' });
-    return true;
-  }
+  if (!origin) return false; // non-browser clients (curl, server-to-server) have no Origin
   const requestOrigin = `${req.protocol}://${req.get('host')}`;
   if (origin !== requestOrigin) {
     res.status(403).json({ error: 'Forbidden' });
@@ -131,8 +128,8 @@ app.post('/api/issues', async (req, res) => {
     paperclipIntakeEnv();
 
   if (!configured) {
-    console.warn('[intake] Paperclip server-omgeving ontbreekt — acceptatie zonder doorzetten (dev)');
-    return res.json({ ok: true });
+    console.error('[intake] Paperclip server-omgeving ontbreekt — intake geweigerd');
+    return res.status(503).json({ error: 'Service tijdelijk niet beschikbaar. Probeer het later opnieuw.' });
   }
 
   if (typeof projectKeyRaw !== 'string' || !projectKeyRaw.trim()) {
