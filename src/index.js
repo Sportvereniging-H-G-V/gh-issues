@@ -74,9 +74,12 @@ app.post('/api/issues', async (req, res) => {
     PAPERCLIP_HELPDESK_AGENT_ID,
   } = process.env;
 
-  if (!PAPERCLIP_API_URL || !PAPERCLIP_API_KEY || !PAPERCLIP_COMPANY_ID || !PAPERCLIP_HELPDESK_AGENT_ID) {
-    console.error('Paperclip env vars niet geconfigureerd');
-    return res.status(500).json({ error: 'Server configuratie ontbreekt' });
+  const paperclipConfigured =
+    PAPERCLIP_API_URL && PAPERCLIP_API_KEY && PAPERCLIP_COMPANY_ID && PAPERCLIP_HELPDESK_AGENT_ID;
+
+  if (!paperclipConfigured) {
+    console.warn('[intake] Paperclip server-omgeving ontbreekt — acceptatie zonder doorzetten (dev)');
+    return res.json({ ok: true });
   }
 
   const description = [
