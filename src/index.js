@@ -22,7 +22,10 @@ app.use(express.json());
 
 function validateOrigin(req, res) {
   const origin = req.headers['origin'];
-  if (!origin) return false;
+  if (!origin) {
+    res.status(403).json({ error: 'Forbidden' });
+    return true;
+  }
   const requestOrigin = `${req.protocol}://${req.get('host')}`;
   if (origin !== requestOrigin) {
     res.status(403).json({ error: 'Forbidden' });
@@ -146,6 +149,9 @@ app.post('/api/issues', async (req, res) => {
     );
     if (!match) {
       return res.status(400).json({ error: 'Kies een geldig project' });
+    }
+    if (typeof match.id !== 'string' || !match.id.trim()) {
+      return res.status(500).json({ error: 'Project-ID ongeldig' });
     }
     selectedProjectId = match.id;
     projectLabel =
