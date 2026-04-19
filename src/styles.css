@@ -203,7 +203,7 @@ h1.display.small {
 @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 .form-section { margin-bottom: 1.5rem; }
 label { display: block; font-family: var(--font-accent); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted-2); margin-bottom: 0.5rem; }
-input[type="text"], textarea { 
+input[type="text"], input[type="email"], select, textarea { 
   width: 100%; 
   padding: 0.75rem 1rem; 
   font-size: 0.95rem; 
@@ -215,7 +215,11 @@ input[type="text"], textarea {
   transition: all 0.2s ease; 
   outline: none; 
 }
-input[type="text"]:focus, textarea:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px var(--ring); }
+select {
+  cursor: pointer;
+  appearance: auto;
+}
+input[type="text"]:focus, input[type="email"]:focus, select:focus, textarea:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px var(--ring); }
 textarea { min-height: 110px; resize: vertical; line-height: 1.6; }
 .form-actions { display: flex; align-items: center; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 button.primary { 

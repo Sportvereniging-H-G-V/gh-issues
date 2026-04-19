@@ -1,4 +1,3 @@
-import { ORG } from './config.js';
 
 function parseTemplateSections(body) {
   const sections = [];
@@ -137,7 +136,6 @@ export function getTemplates() {
     name: t.name,
     titlePrefix: t.titlePrefix || '',
     body: t.body,
-    org: ORG,
     sections: parseTemplateSections(t.body),
   }));
 }

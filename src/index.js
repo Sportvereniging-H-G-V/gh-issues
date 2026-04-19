@@ -1,20 +1,13 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { ORG } from './config.js';
-import { listRepos, listIssues, createIssue, isRepoAllowed, defaultLabelsForTemplateId } from './github.js';
 import { getTemplates } from './templates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-// Eén reverse-proxy-hop (Coolify/nginx): X-Forwarded-* voor protocol/host
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
-// env-object leest GITHUB_TOKEN uit process.env
-const env = { get GITHUB_TOKEN() { return process.env.GITHUB_TOKEN; } };
-
-// Security headers op alle responses
 app.use((_req, res, next) => {
   res.set({
     'X-Content-Type-Options': 'nosniff',
@@ -27,10 +20,12 @@ app.use((_req, res, next) => {
 
 app.use(express.json());
 
-// CSRF-bescherming: blokkeer cross-origin POST-verzoeken op basis van de Origin header.
 function validateOrigin(req, res) {
   const origin = req.headers['origin'];
-  if (!origin) return false; // geen browser / same-origin zonder Origin header
+  if (!origin) {
+    res.status(403).json({ error: 'Forbidden' });
+    return true;
+  }
   const requestOrigin = `${req.protocol}://${req.get('host')}`;
   if (origin !== requestOrigin) {
     res.status(403).json({ error: 'Forbidden' });
@@ -39,14 +34,37 @@ function validateOrigin(req, res) {
   return false;
 }
 
-// GET /api/repos
-app.get('/api/repos', async (_req, res) => {
-  try {
-    res.json(await listRepos(env));
-  } catch {
-    res.status(500).json({ error: 'Kon repos niet ophalen' });
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function allowedCategoryIds() {
+  return new Set(getTemplates().map((t) => t.id));
+}
+
+function paperclipIntakeEnv() {
+  const {
+    PAPERCLIP_API_URL,
+    PAPERCLIP_API_KEY,
+    PAPERCLIP_COMPANY_ID,
+    PAPERCLIP_HELPDESK_AGENT_ID,
+  } = process.env;
+  const configured =
+    PAPERCLIP_API_URL && PAPERCLIP_API_KEY && PAPERCLIP_COMPANY_ID && PAPERCLIP_HELPDESK_AGENT_ID;
+  return { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured };
+}
+
+async function fetchPaperclipProjects() {
+  const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, configured } = paperclipIntakeEnv();
+  if (!configured) return [];
+  const res = await fetch(`${PAPERCLIP_API_URL}/api/companies/${PAPERCLIP_COMPANY_ID}/projects`, {
+    headers: { Authorization: `Bearer ${PAPERCLIP_API_KEY}` },
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error('[Paperclip projects]', res.status, t);
+    throw new Error('projects_fetch_failed');
   }
-});
+  return res.json();
+}
 
 // GET /api/templates
 app.get('/api/templates', (_req, res) => {
@@ -57,76 +75,137 @@ app.get('/api/templates', (_req, res) => {
   }
 });
 
-// POST /api/issues
+// GET /api/projects — actieve Paperclip-projecten (voor project-selector)
+app.get('/api/projects', async (_req, res) => {
+  try {
+    if (!paperclipIntakeEnv().configured) {
+      return res.json([
+        {
+          projectKey: '__no_paperclip__',
+          name: 'Lokaal testen (geen Paperclip-koppeling)',
+        },
+      ]);
+    }
+    const list = await fetchPaperclipProjects();
+    const projects = list
+      .filter(
+        (p) =>
+          p &&
+          typeof p.id === 'string' &&
+          typeof p.urlKey === 'string' &&
+          p.urlKey.trim() &&
+          !p.archivedAt
+      )
+      .map((p) => ({
+        projectKey: p.urlKey.trim(),
+        name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : p.urlKey,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+    res.json(projects);
+  } catch {
+    res.status(500).json({ error: 'Projecten laden mislukt' });
+  }
+});
+
+// POST /api/issues — Paperclip-intake (body: title, body, email, category, projectKey)
 app.post('/api/issues', async (req, res) => {
   if (validateOrigin(req, res)) return;
 
-  const { repo, title, body: issueBody, labels, assignees, templateId } = req.body || {};
+  const { title, body: issueBody, email, category, projectKey: projectKeyRaw } = req.body || {};
 
-  // Input validatie
-  if (typeof repo !== 'string' || !/^[\w.\-]+(\/[\w.\-]+)?$/.test(repo.trim())) {
-    return res.status(400).json({ error: 'Ongeldige repository naam' });
-  }
   if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
     return res.status(400).json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' });
   }
-
   const safeBody = typeof issueBody === 'string' ? issueBody.slice(0, 65_536) : '';
-  const safeLabels = Array.isArray(labels)
-    ? labels.filter((l) => typeof l === 'string' && l.length > 0 && l.length <= 100)
-    : [];
-  const safeAssignees = Array.isArray(assignees)
-    ? assignees.filter((a) => typeof a === 'string' && /^[\w\-]{1,100}$/.test(a))
-    : [];
+  if (!safeBody.trim()) {
+    return res.status(400).json({ error: 'Omschrijving is verplicht' });
+  }
+  if (typeof email !== 'string' || !EMAIL_RE.test(email.trim())) {
+    return res.status(400).json({ error: 'Geldig e-mailadres is verplicht' });
+  }
+  if (typeof category !== 'string' || !allowedCategoryIds().has(category)) {
+    return res.status(400).json({ error: 'Kies een geldige categorie' });
+  }
 
-  const fullRepo = repo.trim().includes('/') ? repo.trim() : `${ORG}/${repo.trim()}`;
+  const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured } =
+    paperclipIntakeEnv();
+
+  if (!configured) {
+    console.warn('[intake] Paperclip server-omgeving ontbreekt — acceptatie zonder doorzetten (dev)');
+    return res.json({ ok: true });
+  }
+
+  if (typeof projectKeyRaw !== 'string' || !projectKeyRaw.trim()) {
+    return res.status(400).json({ error: 'Kies een geldig project' });
+  }
+  const projectKey = projectKeyRaw.trim();
+
+  let selectedProjectId;
+  let projectLabel = projectKey;
+  try {
+    const companyProjects = await fetchPaperclipProjects();
+    const match = companyProjects.find(
+      (p) => !p.archivedAt && typeof p.urlKey === 'string' && p.urlKey.trim() === projectKey
+    );
+    if (!match) {
+      return res.status(400).json({ error: 'Kies een geldig project' });
+    }
+    if (typeof match.id !== 'string' || !match.id.trim()) {
+      return res.status(500).json({ error: 'Project-ID ongeldig' });
+    }
+    selectedProjectId = match.id;
+    projectLabel =
+      typeof match.name === 'string' && match.name.trim() ? match.name.trim() : match.urlKey || projectKey;
+  } catch {
+    return res.status(500).json({ error: 'Projecten valideren mislukt' });
+  }
+
+  const description = [
+    safeBody,
+    '',
+    '---',
+    '',
+    `**E-mail melder:** ${email.trim()}`,
+    `**Categorie:** ${category}`,
+    `**Project:** ${projectLabel}`,
+  ].join('\n');
 
   try {
-    if (!isRepoAllowed(fullRepo)) {
-      return res.status(403).json({ error: 'Issues aanmaken in deze repository is niet toegestaan' });
+    const payload = {
+      title: title.trim(),
+      description,
+      assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
+      projectId: selectedProjectId,
+    };
+
+    const paperclipRes = await fetch(
+      `${PAPERCLIP_API_URL}/api/companies/${PAPERCLIP_COMPANY_ID}/issues`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!paperclipRes.ok) {
+      const errText = await paperclipRes.text();
+      console.error('[Paperclip API]', paperclipRes.status, errText);
+      return res.status(500).json({ error: 'Issue aanmaken bij Paperclip mislukt' });
     }
 
-    let effectiveLabels = safeLabels.slice();
-    if (effectiveLabels.length === 0 && templateId) {
-      const defaults = defaultLabelsForTemplateId(templateId);
-      if (defaults && defaults.length) effectiveLabels = defaults;
-    }
-
-    const payload = { title: title.trim(), body: safeBody };
-    if (effectiveLabels.length > 0) payload.labels = effectiveLabels;
-    if (safeAssignees.length > 0) payload.assignees = safeAssignees;
-
-    const issue = await createIssue(env, fullRepo, payload);
-    res.json({ ok: true, url: issue.html_url, number: issue.number, issue });
-  } catch {
+    const issue = await paperclipRes.json();
+    res.json({ ok: true, identifier: issue.identifier });
+  } catch (err) {
+    console.error('[Issue aanmaken]', err);
     res.status(500).json({ error: 'Issue aanmaken mislukt' });
   }
 });
 
-// GET /api/repos/:repo/issues
-app.get('/api/repos/:repo/issues', async (req, res) => {
-  try {
-    const repo = decodeURIComponent(req.params.repo);
-    const fullRepo = repo.includes('/') ? repo : `${ORG}/${repo}`;
-
-    if (!isRepoAllowed(fullRepo)) {
-      return res.status(403).json({ error: 'Toegang tot deze repository is niet toegestaan' });
-    }
-    const rc = req.query.recentClosed;
-    const recentClosed = rc === '1' || String(rc).toLowerCase() === 'true';
-    res.json(await listIssues(env, fullRepo, { recentClosed }));
-  } catch (err) {
-    if (err instanceof URIError) {
-      return res.status(400).json({ error: 'Ongeldige repository-parameter' });
-    }
-    res.status(500).json({ error: 'Issues ophalen mislukt' });
-  }
-});
-
-// Statische bestanden uit de Vite build
 app.use(express.static(join(__dirname, '../dist')));
 
-// SPA fallback — CSP mee op HTML; Express 5 accepteert geen `*` meer, gebruik `/{*splat}`
 app.get('/{*splat}', (_req, res) => {
   res.set(
     'Content-Security-Policy',

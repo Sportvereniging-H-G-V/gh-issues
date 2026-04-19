@@ -1,7 +1,7 @@
 {
   "name": "gh-issues-creator",
   "version": "2.0.0",
-  "description": "React SPA voor het aanmaken van GitHub issues in Sportvereniging-H-G-V repos",
+  "description": "React SPA voor Paperclip-intakemeldingen (Sportvereniging H.G.V.)",
   "type": "module",
   "scripts": {
     "dev": "vite",
