@@ -61,7 +61,7 @@ try {
       to: (header.to || [''])[0],
       subject: (header.subject || [''])[0],
       date: (header.date || [''])[0],
-      text: text.slice(0, 8192),
+      text: (Buffer.isBuffer(text) ? text.toString('utf8') : String(text)).slice(0, 8192),
     };
   });
 

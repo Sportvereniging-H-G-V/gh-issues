@@ -34,8 +34,11 @@ function parseArgs(argv) {
   return args;
 }
 
-const { to, subject, body } = parseArgs(process.argv);
-if (!to || !subject || !body) usage();
+const { to: toRaw, subject: subjectRaw, body } = parseArgs(process.argv);
+if (!toRaw || !subjectRaw || !body) usage();
+// Strip CR/LF to prevent SMTP header injection
+const to = toRaw.replace(/[\r\n]/g, '');
+const subject = subjectRaw.replace(/[\r\n]/g, '');
 
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_SECURE, SMTP_REPLY_TO } = process.env;
 if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !SMTP_FROM) {
