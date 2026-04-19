@@ -5,7 +5,7 @@ export default function NotFoundPage() {
   return (
     <>
       <nav className="nav">
-        <Link to="/" className="logo" aria-label="Terug naar H.G.V. issues startpagina">
+        <Link to="/" className="logo" aria-label="Terug naar H.G.V. meldingen startpagina">
           <img src="/favicon.svg" alt="" />
         </Link>
         <div className="nav-sep" />
@@ -21,7 +21,7 @@ export default function NotFoundPage() {
             Het kan zijn dat je een tikfout hebt gemaakt, of dat de pagina is verplaatst.
           </p>
           <div className="actions">
-            <Link to="/" className="btn btn-primary">← Terug naar overzicht</Link>
+            <Link to="/" className="btn btn-primary">← Terug naar startpagina</Link>
             <a href="https://www.hgvhengelo.nl" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
               Naar hgvhengelo.nl
             </a>

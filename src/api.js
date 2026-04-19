@@ -1,29 +1,16 @@
-export async function fetchRepos() {
-  const res = await fetch('/api/repos');
-  if (!res.ok) throw new Error((await res.json()).error || 'Fout bij ophalen');
-  return res.json();
-}
-
 export async function fetchTemplates() {
   const res = await fetch('/api/templates');
   if (!res.ok) throw new Error((await res.json()).error || 'Templates laden mislukt');
   return res.json();
 }
 
-export async function fetchIssues(repo, { recentClosed = false } = {}) {
-  const q = recentClosed ? '?recentClosed=1' : '';
-  const res = await fetch(`/api/repos/${encodeURIComponent(repo)}/issues${q}`);
-  if (!res.ok) throw new Error((await res.json()).error || 'Issues ophalen mislukt');
-  return res.json();
-}
-
-export async function createIssue(payload) {
+export async function submitIntake(payload) {
   const res = await fetch('/api/issues', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Issue aanmaken mislukt');
+  if (!res.ok) throw new Error(data.error || 'Melding insturen mislukt');
   return data;
 }
