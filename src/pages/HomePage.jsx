@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Nav from '../components/Nav';
 import SectionDivider from '../components/SectionDivider';
-import { fetchTemplates, submitIntake } from '../api';
+import { fetchTemplates, fetchProjects, submitIntake } from '../api';
 
 function buildIssueTitle(template, description) {
   const first =
@@ -23,9 +23,12 @@ function buildIssueBody(name, description) {
 export default function HomePage() {
   const [templates, setTemplates] = useState(null);
   const [templatesError, setTemplatesError] = useState(null);
+  const [projects, setProjects] = useState(null);
+  const [projectsError, setProjectsError] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('');
+  const [projectKey, setProjectKey] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
@@ -37,6 +40,15 @@ export default function HomePage() {
         if (list?.length) setCategory((c) => c || list[0].id);
       })
       .catch((e) => setTemplatesError(e.message));
+  }, []);
+
+  useEffect(() => {
+    fetchProjects()
+      .then((list) => {
+        setProjects(list);
+        if (list?.length) setProjectKey((k) => k || list[0].projectKey);
+      })
+      .catch((e) => setProjectsError(e.message));
   }, []);
 
   const selectedTemplate = useMemo(
@@ -66,6 +78,10 @@ export default function HomePage() {
       setMessage({ type: 'error', text: 'Kies een categorie.' });
       return;
     }
+    if (!projectKey || !projects?.some((p) => p.projectKey === projectKey)) {
+      setMessage({ type: 'error', text: 'Kies voor welke website of afdeling de melding is.' });
+      return;
+    }
 
     const title = buildIssueTitle(selectedTemplate, desc);
     const body = buildIssueBody(reporterName, desc);
@@ -77,6 +93,7 @@ export default function HomePage() {
         body,
         email: addr,
         category: selectedTemplate.id,
+        projectKey,
       });
       setMessage({
         type: 'success',
@@ -86,6 +103,7 @@ export default function HomePage() {
       setEmail('');
       setDescription('');
       if (templates?.length) setCategory(templates[0].id);
+      if (projects?.length) setProjectKey(projects[0].projectKey);
     } catch (err) {
       setMessage({ type: 'error', text: 'Fout: ' + err.message });
     } finally {
@@ -110,14 +128,23 @@ export default function HomePage() {
         <SectionDivider label="Formulier" />
 
         <div className="form-panel">
-          {!templates && !templatesError && <div className="loading">Categorieën laden…</div>}
+          {(!templates || !projects) && !templatesError && !projectsError && (
+            <div className="loading">Formulier laden…</div>
+          )}
           {templatesError && <p className="error-box">{templatesError}</p>}
+          {projectsError && <p className="error-box">{projectsError}</p>}
 
           {templates && templates.length === 0 && (
             <p className="error-box">Er zijn geen categorieën beschikbaar. Probeer het later opnieuw.</p>
           )}
 
-          {templates && templates.length > 0 && (
+          {projects && projects.length === 0 && !projectsError && (
+            <p className="error-box">
+              Er zijn geen Paperclip-projecten beschikbaar voor meldingen. Neem contact op met het team.
+            </p>
+          )}
+
+          {templates && templates.length > 0 && projects && projects.length > 0 && (
             <form onSubmit={handleSubmit}>
               <div className="form-section">
                 <label htmlFor="reporter-name">Uw naam</label>
@@ -146,6 +173,22 @@ export default function HomePage() {
                   value={email}
                   onChange={(ev) => setEmail(ev.target.value)}
                 />
+              </div>
+              <div className="form-section">
+                <label htmlFor="project">Voor welke website / afdeling?</label>
+                <select
+                  id="project"
+                  name="project"
+                  required
+                  value={projectKey}
+                  onChange={(ev) => setProjectKey(ev.target.value)}
+                >
+                  {projects.map((p) => (
+                    <option key={p.projectKey} value={p.projectKey}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-section">
                 <label htmlFor="category">Categorie</label>

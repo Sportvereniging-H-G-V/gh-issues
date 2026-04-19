@@ -4,6 +4,12 @@ export async function fetchTemplates() {
   return res.json();
 }
 
+export async function fetchProjects() {
+  const res = await fetch('/api/projects');
+  if (!res.ok) throw new Error((await res.json()).error || 'Projecten laden mislukt');
+  return res.json();
+}
+
 export async function submitIntake(payload) {
   const res = await fetch('/api/issues', {
     method: 'POST',

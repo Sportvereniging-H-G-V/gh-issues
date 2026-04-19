@@ -33,15 +33,34 @@ function validateOrigin(req, res) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const PROJECT_KEY_MAP = {
-  'hgv-hengelo':        '92e85457-9d5a-4c30-90d1-0f5876cd309a',
-  'dansstudio-hengelo': 'aeb3a292-5bab-4692-a354-5c646f35e33f',
-  'turnen-hengelo':     'c17e88ad-2306-4c05-8ab7-5824b078e3ec',
-  'apenkooitoernooi':   '016a748d-4858-4a20-b6cb-bc67b117847b',
-};
-
 function allowedCategoryIds() {
   return new Set(getTemplates().map((t) => t.id));
+}
+
+function paperclipIntakeEnv() {
+  const {
+    PAPERCLIP_API_URL,
+    PAPERCLIP_API_KEY,
+    PAPERCLIP_COMPANY_ID,
+    PAPERCLIP_HELPDESK_AGENT_ID,
+  } = process.env;
+  const configured =
+    PAPERCLIP_API_URL && PAPERCLIP_API_KEY && PAPERCLIP_COMPANY_ID && PAPERCLIP_HELPDESK_AGENT_ID;
+  return { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured };
+}
+
+async function fetchPaperclipProjects() {
+  const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, configured } = paperclipIntakeEnv();
+  if (!configured) return [];
+  const res = await fetch(`${PAPERCLIP_API_URL}/api/companies/${PAPERCLIP_COMPANY_ID}/projects`, {
+    headers: { Authorization: `Bearer ${PAPERCLIP_API_KEY}` },
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    console.error('[Paperclip projects]', res.status, t);
+    throw new Error('projects_fetch_failed');
+  }
+  return res.json();
 }
 
 // GET /api/templates
@@ -53,11 +72,43 @@ app.get('/api/templates', (_req, res) => {
   }
 });
 
+// GET /api/projects — actieve Paperclip-projecten (voor project-selector)
+app.get('/api/projects', async (_req, res) => {
+  try {
+    if (!paperclipIntakeEnv().configured) {
+      return res.json([
+        {
+          projectKey: '__no_paperclip__',
+          name: 'Lokaal testen (geen Paperclip-koppeling)',
+        },
+      ]);
+    }
+    const list = await fetchPaperclipProjects();
+    const projects = list
+      .filter(
+        (p) =>
+          p &&
+          typeof p.id === 'string' &&
+          typeof p.urlKey === 'string' &&
+          p.urlKey.trim() &&
+          !p.archivedAt
+      )
+      .map((p) => ({
+        projectKey: p.urlKey.trim(),
+        name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : p.urlKey,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+    res.json(projects);
+  } catch {
+    res.status(500).json({ error: 'Projecten laden mislukt' });
+  }
+});
+
 // POST /api/issues — Paperclip-intake (body: title, body, email, category, projectKey)
 app.post('/api/issues', async (req, res) => {
   if (validateOrigin(req, res)) return;
 
-  const { title, body: issueBody, email, category, projectKey } = req.body || {};
+  const { title, body: issueBody, email, category, projectKey: projectKeyRaw } = req.body || {};
 
   if (typeof title !== 'string' || title.trim().length === 0 || title.length > 256) {
     return res.status(400).json({ error: 'Titel is verplicht en mag maximaal 256 tekens bevatten' });
@@ -72,25 +123,35 @@ app.post('/api/issues', async (req, res) => {
   if (typeof category !== 'string' || !allowedCategoryIds().has(category)) {
     return res.status(400).json({ error: 'Kies een geldige categorie' });
   }
-  if (typeof projectKey !== 'string' || !(projectKey in PROJECT_KEY_MAP)) {
-    return res.status(400).json({ error: 'Kies een geldig project' });
-  }
 
-  const resolvedProjectId = PROJECT_KEY_MAP[projectKey];
+  const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured } =
+    paperclipIntakeEnv();
 
-  const {
-    PAPERCLIP_API_URL,
-    PAPERCLIP_API_KEY,
-    PAPERCLIP_COMPANY_ID,
-    PAPERCLIP_HELPDESK_AGENT_ID,
-  } = process.env;
-
-  const paperclipConfigured =
-    PAPERCLIP_API_URL && PAPERCLIP_API_KEY && PAPERCLIP_COMPANY_ID && PAPERCLIP_HELPDESK_AGENT_ID;
-
-  if (!paperclipConfigured) {
+  if (!configured) {
     console.warn('[intake] Paperclip server-omgeving ontbreekt — acceptatie zonder doorzetten (dev)');
     return res.json({ ok: true });
+  }
+
+  if (typeof projectKeyRaw !== 'string' || !projectKeyRaw.trim()) {
+    return res.status(400).json({ error: 'Kies een geldig project' });
+  }
+  const projectKey = projectKeyRaw.trim();
+
+  let selectedProjectId;
+  let projectLabel = projectKey;
+  try {
+    const companyProjects = await fetchPaperclipProjects();
+    const match = companyProjects.find(
+      (p) => !p.archivedAt && typeof p.urlKey === 'string' && p.urlKey.trim() === projectKey
+    );
+    if (!match) {
+      return res.status(400).json({ error: 'Kies een geldig project' });
+    }
+    selectedProjectId = match.id;
+    projectLabel =
+      typeof match.name === 'string' && match.name.trim() ? match.name.trim() : match.urlKey || projectKey;
+  } catch {
+    return res.status(500).json({ error: 'Projecten valideren mislukt' });
   }
 
   const description = [
@@ -100,7 +161,7 @@ app.post('/api/issues', async (req, res) => {
     '',
     `**E-mail melder:** ${email.trim()}`,
     `**Categorie:** ${category}`,
-    `**Project:** ${projectKey}`,
+    `**Project:** ${projectLabel}`,
   ].join('\n');
 
   try {
@@ -108,7 +169,7 @@ app.post('/api/issues', async (req, res) => {
       title: title.trim(),
       description,
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
-      projectId: resolvedProjectId,
+      projectId: selectedProjectId,
     };
 
     const paperclipRes = await fetch(
