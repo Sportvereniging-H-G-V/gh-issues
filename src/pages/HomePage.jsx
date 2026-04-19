@@ -48,7 +48,10 @@ export default function HomePage() {
         setProjects(list);
         if (list?.length) setProjectKey((k) => k || list[0].projectKey);
       })
-      .catch((e) => setProjectsError(e.message));
+      .catch(() => {
+        // Fallback: zet lege lijst — formulier toont foutmelding
+        setProjects([]);
+      });
   }, []);
 
   const selectedTemplate = useMemo(
@@ -175,20 +178,28 @@ export default function HomePage() {
                 />
               </div>
               <div className="form-section">
-                <label htmlFor="project">Voor welke website / afdeling?</label>
-                <select
-                  id="project"
-                  name="project"
-                  required
-                  value={projectKey}
-                  onChange={(ev) => setProjectKey(ev.target.value)}
-                >
+                <label>Voor welke website / afdeling?</label>
+                <div className="project-cards" role="group" aria-label="Kies een project">
                   {projects.map((p) => (
-                    <option key={p.projectKey} value={p.projectKey}>
-                      {p.name}
-                    </option>
+                    <button
+                      key={p.projectKey}
+                      type="button"
+                      className={`project-card${projectKey === p.projectKey ? ' selected' : ''}`}
+                      onClick={() => setProjectKey(p.projectKey)}
+                      aria-pressed={projectKey === p.projectKey}
+                    >
+                      {p.image && (
+                        <img
+                          src={p.image}
+                          alt=""
+                          className="project-card-img"
+                          loading="lazy"
+                        />
+                      )}
+                      <span className="project-card-name">{p.name}</span>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
               <div className="form-section">
                 <label htmlFor="category">Categorie</label>

@@ -296,3 +296,12 @@ button.primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
   .form-panel { padding: 1.5rem; }
 }
 
+
+/* Project cards */
+.project-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.project-card { display: flex; flex-direction: column; align-items: stretch; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; overflow: hidden; padding: 0; transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s; text-align: center; }
+.project-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px var(--ring); transform: translateY(-2px); }
+.project-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+.project-card-img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; display: block; border-bottom: 1px solid var(--border); }
+.project-card-name { padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: 700; font-family: var(--font-accent); color: var(--text); }
+@media (max-width: 480px) { .project-cards { grid-template-columns: 1fr; } }

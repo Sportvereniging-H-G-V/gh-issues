@@ -2,6 +2,7 @@ import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { getTemplates } from './templates.js';
+import { PROJECTS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -72,36 +73,9 @@ app.get('/api/templates', (_req, res) => {
   }
 });
 
-// GET /api/projects — actieve Paperclip-projecten (voor project-selector)
-app.get('/api/projects', async (_req, res) => {
-  try {
-    if (!paperclipIntakeEnv().configured) {
-      return res.json([
-        {
-          projectKey: '__no_paperclip__',
-          name: 'Lokaal testen (geen Paperclip-koppeling)',
-        },
-      ]);
-    }
-    const list = await fetchPaperclipProjects();
-    const projects = list
-      .filter(
-        (p) =>
-          p &&
-          typeof p.id === 'string' &&
-          typeof p.urlKey === 'string' &&
-          p.urlKey.trim() &&
-          !p.archivedAt
-      )
-      .map((p) => ({
-        projectKey: p.urlKey.trim(),
-        name: typeof p.name === 'string' && p.name.trim() ? p.name.trim() : p.urlKey,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
-    res.json(projects);
-  } catch {
-    res.status(500).json({ error: 'Projecten laden mislukt' });
-  }
+// GET /api/projects — hardcoded project-lijst (onafhankelijk van externe API's)
+app.get('/api/projects', (_req, res) => {
+  res.json(PROJECTS.map(({ projectKey, name, image, favicon }) => ({ projectKey, name, image, favicon })));
 });
 
 // POST /api/issues — Paperclip-intake (body: title, body, email, category, projectKey)
@@ -137,24 +111,26 @@ app.post('/api/issues', async (req, res) => {
   }
   const projectKey = projectKeyRaw.trim();
 
+  const configProject = PROJECTS.find((p) => p.projectKey === projectKey);
+  if (!configProject) {
+    return res.status(400).json({ error: 'Kies een geldig project' });
+  }
+
   let selectedProjectId;
-  let projectLabel = projectKey;
+  const projectLabel = configProject.name;
   try {
     const companyProjects = await fetchPaperclipProjects();
     const match = companyProjects.find(
       (p) => !p.archivedAt && typeof p.urlKey === 'string' && p.urlKey.trim() === projectKey
     );
-    if (!match) {
-      return res.status(400).json({ error: 'Kies een geldig project' });
+    if (match) {
+      if (typeof match.id !== 'string' || !match.id.trim()) {
+        return res.status(500).json({ error: 'Project-ID ongeldig' });
+      }
+      selectedProjectId = match.id;
     }
-    if (typeof match.id !== 'string' || !match.id.trim()) {
-      return res.status(500).json({ error: 'Project-ID ongeldig' });
-    }
-    selectedProjectId = match.id;
-    projectLabel =
-      typeof match.name === 'string' && match.name.trim() ? match.name.trim() : match.urlKey || projectKey;
   } catch {
-    return res.status(500).json({ error: 'Projecten valideren mislukt' });
+    // Paperclip niet bereikbaar — issue wordt aangemaakt zonder projectId
   }
 
   const description = [
@@ -172,7 +148,7 @@ app.post('/api/issues', async (req, res) => {
       title: title.trim(),
       description,
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
-      projectId: selectedProjectId,
+      ...(selectedProjectId ? { projectId: selectedProjectId } : {}),
     };
 
     const paperclipRes = await fetch(
