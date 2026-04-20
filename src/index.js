@@ -147,6 +147,7 @@ app.post('/api/issues', async (req, res) => {
     const payload = {
       title: title.trim(),
       description,
+      status: 'todo',
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
       ...(selectedProjectId ? { projectId: selectedProjectId } : {}),
     };
@@ -342,6 +343,7 @@ app.post('/api/intake/sporthengelo', async (req, res) => {
     const payload = {
       title,
       description,
+      status: 'todo',
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
       ...(projectId ? { projectId } : {}),
     };
