@@ -246,18 +246,81 @@ app.post('/api/intake/sporthengelo', async (req, res) => {
     return res.status(429).json({ error: 'Te veel verzoeken, probeer het later opnieuw' });
   }
 
-  const { sport_naam, categorie, contactpersoon, omschrijving } = req.body ?? {};
+  const b = req.body ?? {};
+  const str = (v, max = 2000) => (typeof v === 'string' ? v.slice(0, max).trim() : '');
 
-  if (typeof sport_naam !== 'string' || !sport_naam.trim() || sport_naam.length > 256) {
-    return res.status(400).json({ error: 'Naam sport of vereniging is verplicht (max. 256 tekens)' });
+  const naam_inzender = str(b.naam_inzender, 256);
+  const email_inzender = str(b.email_inzender, 256);
+  const type = str(b.type, 32);
+  const opmerkingen = str(b.opmerkingen, 5000);
+
+  if (!naam_inzender) return res.status(400).json({ error: 'Naam inzender is verplicht' });
+  if (!EMAIL_RE.test(email_inzender)) return res.status(400).json({ error: 'Geldig e-mailadres is verplicht' });
+  if (type !== 'nieuwe_sport' && type !== 'bestaande_sport') {
+    return res.status(400).json({ error: 'Kies een geldig type melding' });
   }
-  if (typeof categorie !== 'string' || !INTAKE_ALLOWED_CATEGORIES.has(categorie)) {
-    return res.status(400).json({ error: 'Kies een geldige categorie' });
+
+  let title, description;
+
+  if (type === 'nieuwe_sport') {
+    const sport_naam = str(b.sport_naam, 256);
+    const sport_uitleg = str(b.sport_uitleg, 5000);
+    const aanbieders = str(b.aanbieders, 2000);
+    const categorie = str(b.categorie, 32);
+    const sport_afbeelding_url = str(b.sport_afbeelding_url, 1000);
+    const aanbieder_url = str(b.aanbieder_url, 1000);
+
+    if (!sport_naam) return res.status(400).json({ error: 'Naam van de sport is verplicht' });
+    if (!sport_uitleg) return res.status(400).json({ error: 'Uitleg over de sport is verplicht' });
+    if (!aanbieders) return res.status(400).json({ error: 'Aanbieder(s) is verplicht' });
+    if (!INTAKE_ALLOWED_CATEGORIES.has(categorie)) return res.status(400).json({ error: 'Kies een geldige categorie' });
+
+    title = `[SportHengelo] Nieuwe sport: ${sport_naam}`;
+    description = [
+      `Melding via SportHengelo contactformulier — **nieuwe sport**.`,
+      '',
+      '## Inzender',
+      `**Naam:** ${naam_inzender}`,
+      `**E-mail:** ${email_inzender}`,
+      '',
+      '## Sport',
+      `**Naam:** ${sport_naam}`,
+      `**Categorie:** ${INTAKE_CATEGORY_LABELS[categorie] ?? categorie}`,
+      '',
+      '## Uitleg',
+      sport_uitleg,
+      '',
+      '## Aanbieder(s)',
+      aanbieders,
+      ...(aanbieder_url ? ['', '## Website aanbieder(s)', aanbieder_url] : []),
+      ...(sport_afbeelding_url ? ['', '## Afbeelding', sport_afbeelding_url] : []),
+      ...(opmerkingen ? ['', '## Opmerkingen', opmerkingen] : []),
+    ].join('\n');
+  } else {
+    const sport_naam = str(b.sport_naam, 256);
+    const nieuwe_aanbieders = str(b.nieuwe_aanbieders, 2000);
+    const aanbieder_url = str(b.aanbieder_url, 1000);
+
+    if (!sport_naam) return res.status(400).json({ error: 'Naam van de sport is verplicht' });
+    if (!nieuwe_aanbieders) return res.status(400).json({ error: 'Aan te bieder aanbieder(s) is verplicht' });
+
+    title = `[SportHengelo] Nieuwe aanbieder: ${sport_naam}`;
+    description = [
+      `Melding via SportHengelo contactformulier — **nieuwe aanbieder bij bestaande sport**.`,
+      '',
+      '## Inzender',
+      `**Naam:** ${naam_inzender}`,
+      `**E-mail:** ${email_inzender}`,
+      '',
+      '## Sport',
+      sport_naam,
+      '',
+      '## Toe te voegen aanbieder(s)',
+      nieuwe_aanbieders,
+      ...(aanbieder_url ? ['', '## Website aanbieder(s)', aanbieder_url] : []),
+      ...(opmerkingen ? ['', '## Opmerkingen', opmerkingen] : []),
+    ].join('\n');
   }
-  if (typeof omschrijving !== 'string' || !omschrijving.trim() || omschrijving.length > 10_000) {
-    return res.status(400).json({ error: 'Omschrijving is verplicht (max. 10.000 tekens)' });
-  }
-  const safeContactpersoon = typeof contactpersoon === 'string' ? contactpersoon.slice(0, 256).trim() : '';
 
   const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured } =
     paperclipIntakeEnv();
@@ -275,25 +338,9 @@ app.post('/api/intake/sporthengelo', async (req, res) => {
     // Proceed without projectId
   }
 
-  const description = [
-    'Nieuwe melding via het SportHengelo contactformulier.',
-    '',
-    '## Naam sport of vereniging',
-    sport_naam.trim(),
-    '',
-    '## Categorie',
-    INTAKE_CATEGORY_LABELS[categorie] ?? categorie,
-    '',
-    '## Contactpersoon',
-    safeContactpersoon || '_Niet opgegeven_',
-    '',
-    '## Omschrijving',
-    omschrijving.trim(),
-  ].join('\n');
-
   try {
     const payload = {
-      title: `[SportHengelo] Melding: ${sport_naam.trim()}`,
+      title,
       description,
       assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
       ...(projectId ? { projectId } : {}),
