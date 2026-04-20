@@ -25,4 +25,10 @@ export const PROJECTS = [
     image: '/images/repos/turnenhengelo.webp',
     favicon: '/images/repos/turnenhengelo-favicon.ico',
   },
+  {
+    projectKey: 'sporthengelo',
+    name: 'SportHengelo',
+    image: '/images/repos/sporthengelo.webp',
+    favicon: '/images/repos/sporthengelo-favicon.svg',
+  },
 ];
