@@ -177,6 +177,149 @@ app.post('/api/issues', async (req, res) => {
   }
 });
 
+// ─── SportHengelo public intake ──────────────────────────────────────────────
+
+const SPORTHENGELO_ORIGIN = 'https://sporthengelo.nl';
+const INTAKE_ALLOWED_CATEGORIES = new Set(['regulier', 'aangepast', 'weet_ik_niet']);
+const INTAKE_CATEGORY_LABELS = { regulier: 'Regulier', aangepast: 'Aangepast', weet_ik_niet: 'Weet ik niet' };
+
+// Simple in-memory rate limiter: max 10 requests per IP per 15 minutes
+const intakeRateMap = new Map();
+function checkIntakeRate(ip) {
+  const now = Date.now();
+  const window = 15 * 60 * 1000;
+  const limit = 10;
+  const entry = intakeRateMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    intakeRateMap.set(ip, { count: 1, resetAt: now + window });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of intakeRateMap.entries()) {
+    if (now > val.resetAt) intakeRateMap.delete(key);
+  }
+}, 30 * 60 * 1000).unref();
+
+function setCorsSporthengelo(res) {
+  res.set('Access-Control-Allow-Origin', SPORTHENGELO_ORIGIN);
+  res.set('Vary', 'Origin');
+}
+
+app.options('/api/intake/sporthengelo', (req, res) => {
+  if (req.headers['origin'] === SPORTHENGELO_ORIGIN) {
+    setCorsSporthengelo(res);
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Max-Age', '86400');
+  }
+  res.status(204).end();
+});
+
+app.post('/api/intake/sporthengelo', async (req, res) => {
+  if (req.headers['origin'] === SPORTHENGELO_ORIGIN) setCorsSporthengelo(res);
+
+  const intakeToken = process.env.INTAKE_TOKEN_SPORTHENGELO;
+  if (!intakeToken) {
+    console.error('[sporthengelo intake] INTAKE_TOKEN_SPORTHENGELO niet geconfigureerd');
+    return res.status(503).json({ error: 'Service niet geconfigureerd' });
+  }
+
+  const authHeader = req.headers['authorization'] ?? '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!bearerToken || bearerToken !== intakeToken) {
+    return res.status(401).json({ error: 'Ongeautoriseerd' });
+  }
+
+  if (!checkIntakeRate(req.ip)) {
+    return res.status(429).json({ error: 'Te veel verzoeken, probeer het later opnieuw' });
+  }
+
+  const { sport_naam, categorie, contactpersoon, omschrijving } = req.body ?? {};
+
+  if (typeof sport_naam !== 'string' || !sport_naam.trim() || sport_naam.length > 256) {
+    return res.status(400).json({ error: 'Naam sport of vereniging is verplicht (max. 256 tekens)' });
+  }
+  if (typeof categorie !== 'string' || !INTAKE_ALLOWED_CATEGORIES.has(categorie)) {
+    return res.status(400).json({ error: 'Kies een geldige categorie' });
+  }
+  if (typeof omschrijving !== 'string' || !omschrijving.trim() || omschrijving.length > 10_000) {
+    return res.status(400).json({ error: 'Omschrijving is verplicht (max. 10.000 tekens)' });
+  }
+  const safeContactpersoon = typeof contactpersoon === 'string' ? contactpersoon.slice(0, 256).trim() : '';
+
+  const { PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_HELPDESK_AGENT_ID, configured } =
+    paperclipIntakeEnv();
+  if (!configured) {
+    console.error('[sporthengelo intake] Paperclip omgevingsvariabelen ontbreken');
+    return res.status(503).json({ error: 'Service tijdelijk niet beschikbaar' });
+  }
+
+  let projectId;
+  try {
+    const projects = await fetchPaperclipProjects();
+    const match = projects.find((p) => !p.archivedAt && p.urlKey === 'sporthengelo');
+    if (match) projectId = match.id;
+  } catch {
+    // Proceed without projectId
+  }
+
+  const description = [
+    'Nieuwe melding via het SportHengelo contactformulier.',
+    '',
+    '## Naam sport of vereniging',
+    sport_naam.trim(),
+    '',
+    '## Categorie',
+    INTAKE_CATEGORY_LABELS[categorie] ?? categorie,
+    '',
+    '## Contactpersoon',
+    safeContactpersoon || '_Niet opgegeven_',
+    '',
+    '## Omschrijving',
+    omschrijving.trim(),
+  ].join('\n');
+
+  try {
+    const payload = {
+      title: `[SportHengelo] Melding: ${sport_naam.trim()}`,
+      description,
+      assigneeAgentId: PAPERCLIP_HELPDESK_AGENT_ID,
+      ...(projectId ? { projectId } : {}),
+    };
+
+    const paperclipRes = await fetch(
+      `${PAPERCLIP_API_URL}/api/companies/${PAPERCLIP_COMPANY_ID}/issues`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!paperclipRes.ok) {
+      const errText = await paperclipRes.text();
+      console.error('[sporthengelo intake] Paperclip API', paperclipRes.status, errText);
+      return res.status(500).json({ error: 'Issue aanmaken mislukt' });
+    }
+
+    const issue = await paperclipRes.json();
+    res.json({ ok: true, identifier: issue.identifier });
+  } catch (err) {
+    console.error('[sporthengelo intake]', err);
+    res.status(500).json({ error: 'Issue aanmaken mislukt' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(express.static(join(__dirname, '../dist')));
 
 app.get('/{*splat}', (_req, res) => {
