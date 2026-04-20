@@ -203,6 +203,7 @@ h1.display.small {
 @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 .form-section { margin-bottom: 1.5rem; }
 label { display: block; font-family: var(--font-accent); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted-2); margin-bottom: 0.5rem; }
+.field-required { color: var(--accent); font-size: 0.85em; }
 input[type="text"], input[type="email"], select, textarea { 
   width: 100%; 
   padding: 0.75rem 1rem; 

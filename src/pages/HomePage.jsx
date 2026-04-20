@@ -3,21 +3,28 @@ import Nav from '../components/Nav';
 import SectionDivider from '../components/SectionDivider';
 import { fetchTemplates, fetchProjects, submitIntake } from '../api';
 
-function buildIssueTitle(template, description) {
-  const first =
-    description
-      .trim()
-      .split(/\n/)
-      .find((line) => line.trim()) || '';
-  const snippet = first.trim().slice(0, 200);
-  const prefix = template?.titlePrefix || (template?.name ? `[${template.name}] ` : '');
+function buildIssueTitle(template, sectionAnswers) {
+  const firstAnswer = template.sections
+    .map((_, i) => (sectionAnswers[i] || '').trim())
+    .find((v) => v) || '';
+  const snippet = firstAnswer.split(/\n/)[0].trim().slice(0, 200);
+  const prefix = template.titlePrefix || '';
   const raw = `${prefix}${snippet}`.trim();
   if (raw.length <= 256) return raw || `${prefix}Melding`.trim().slice(0, 256);
   return raw.slice(0, 256);
 }
 
-function buildIssueBody(name, description) {
-  return `## Melder\n\n${name}\n\n## Omschrijving\n\n${description}`;
+function buildIssueBody(reporterName, template, sectionAnswers) {
+  const sectionLines = template.sections
+    .map((section, i) => {
+      const answer = (sectionAnswers[i] || '').trim();
+      if (!answer) return null;
+      return `## ${section.heading}\n\n${answer}`;
+    })
+    .filter(Boolean)
+    .join('\n\n');
+
+  return `## Melder\n\n${reporterName}\n\n${sectionLines}`;
 }
 
 export default function HomePage() {
@@ -29,7 +36,7 @@ export default function HomePage() {
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('');
   const [projectKey, setProjectKey] = useState('');
-  const [description, setDescription] = useState('');
+  const [sectionAnswers, setSectionAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -49,15 +56,23 @@ export default function HomePage() {
         if (list?.length) setProjectKey((k) => k || list[0].projectKey);
       })
       .catch(() => {
-        // Fallback: zet lege lijst — formulier toont foutmelding
         setProjects([]);
       });
   }, []);
+
+  // Reset section answers when category changes
+  useEffect(() => {
+    setSectionAnswers({});
+  }, [category]);
 
   const selectedTemplate = useMemo(
     () => templates?.find((t) => t.id === category),
     [templates, category]
   );
+
+  function setSectionAnswer(index, value) {
+    setSectionAnswers((prev) => ({ ...prev, [index]: value }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -72,22 +87,27 @@ export default function HomePage() {
       setMessage({ type: 'error', text: 'Vul uw e-mailadres in.' });
       return;
     }
-    const desc = description.trim();
-    if (!desc) {
-      setMessage({ type: 'error', text: 'Vul een omschrijving in.' });
-      return;
-    }
     if (!selectedTemplate) {
       setMessage({ type: 'error', text: 'Kies een categorie.' });
       return;
     }
+
+    // Validate required sections
+    for (let i = 0; i < selectedTemplate.sections.length; i++) {
+      const section = selectedTemplate.sections[i];
+      if (section.required && !(sectionAnswers[i] || '').trim()) {
+        setMessage({ type: 'error', text: `Vul "${section.heading}" in.` });
+        return;
+      }
+    }
+
     if (!projectKey || !projects?.some((p) => p.projectKey === projectKey)) {
       setMessage({ type: 'error', text: 'Kies voor welke website of afdeling de melding is.' });
       return;
     }
 
-    const title = buildIssueTitle(selectedTemplate, desc);
-    const body = buildIssueBody(reporterName, desc);
+    const title = buildIssueTitle(selectedTemplate, sectionAnswers);
+    const body = buildIssueBody(reporterName, selectedTemplate, sectionAnswers);
 
     setSubmitting(true);
     try {
@@ -104,7 +124,7 @@ export default function HomePage() {
       });
       setName('');
       setEmail('');
-      setDescription('');
+      setSectionAnswers({});
       if (templates?.length) setCategory(templates[0].id);
       if (projects?.length) setProjectKey(projects[0].projectKey);
     } catch (err) {
@@ -217,18 +237,24 @@ export default function HomePage() {
                   ))}
                 </select>
               </div>
-              <div className="form-section">
-                <label htmlFor="description">Omschrijving</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={8}
-                  required
-                  placeholder="Beschrijf je melding zo duidelijk mogelijk…"
-                  value={description}
-                  onChange={(ev) => setDescription(ev.target.value)}
-                />
-              </div>
+
+              {selectedTemplate?.sections.map((section, i) => (
+                <div className="form-section" key={`${category}-${i}`}>
+                  <label htmlFor={`section-${i}`}>
+                    {section.heading}
+                    {section.required && <span className="field-required" aria-hidden="true"> *</span>}
+                  </label>
+                  <textarea
+                    id={`section-${i}`}
+                    name={`section-${i}`}
+                    rows={4}
+                    placeholder={section.placeholder}
+                    value={sectionAnswers[i] || ''}
+                    onChange={(ev) => setSectionAnswer(i, ev.target.value)}
+                  />
+                </div>
+              ))}
+
               <div className="form-actions">
                 <button type="submit" className="primary" disabled={submitting}>
                   {submitting ? 'Bezig met insturen…' : 'Melding insturen'}
