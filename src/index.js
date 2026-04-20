@@ -179,7 +179,10 @@ app.post('/api/issues', async (req, res) => {
 
 // ─── SportHengelo public intake ──────────────────────────────────────────────
 
-const SPORTHENGELO_ORIGIN = 'https://sporthengelo.nl';
+const SPORTHENGELO_ALLOWED_ORIGINS = new Set([
+  'https://sporthengelo.nl',
+  'https://sporthengelo.pages.dev',
+]);
 const INTAKE_ALLOWED_CATEGORIES = new Set(['regulier', 'aangepast', 'weet_ik_niet']);
 const INTAKE_CATEGORY_LABELS = { regulier: 'Regulier', aangepast: 'Aangepast', weet_ik_niet: 'Weet ik niet' };
 
@@ -205,14 +208,18 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000).unref();
 
-function setCorsSporthengelo(res) {
-  res.set('Access-Control-Allow-Origin', SPORTHENGELO_ORIGIN);
-  res.set('Vary', 'Origin');
+function setCorsSporthengelo(req, res) {
+  const origin = req.headers['origin'];
+  if (origin && SPORTHENGELO_ALLOWED_ORIGINS.has(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Vary', 'Origin');
+  }
 }
 
 app.options('/api/intake/sporthengelo', (req, res) => {
-  if (req.headers['origin'] === SPORTHENGELO_ORIGIN) {
-    setCorsSporthengelo(res);
+  const origin = req.headers['origin'];
+  if (origin && SPORTHENGELO_ALLOWED_ORIGINS.has(origin)) {
+    setCorsSporthengelo(req, res);
     res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.set('Access-Control-Max-Age', '86400');
@@ -221,7 +228,7 @@ app.options('/api/intake/sporthengelo', (req, res) => {
 });
 
 app.post('/api/intake/sporthengelo', async (req, res) => {
-  if (req.headers['origin'] === SPORTHENGELO_ORIGIN) setCorsSporthengelo(res);
+  setCorsSporthengelo(req, res);
 
   const intakeToken = process.env.INTAKE_TOKEN_SPORTHENGELO;
   if (!intakeToken) {
