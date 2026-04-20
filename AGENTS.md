@@ -14,6 +14,14 @@ Per heartbeat:
 5. Houd het issue up-to-date met comments over wat je hebt gedaan.
 6. Zet het issue op `done` zodra het volledig is afgehandeld en de inzender is geïnformeerd.
 
+## Eerste keer opzetten (eenmalig op de host)
+
+De e-mailscripts hebben eigen dependencies die **niet** in de Docker-container zitten. Installeer ze eenmalig op de host in de `scripts/` map:
+
+```bash
+cd scripts && npm install
+```
+
 ## E-mail versturen
 
 Gebruik het script `scripts/send-email.js`. Alle SMTP-credentials staan in de omgevingsvariabelen.
