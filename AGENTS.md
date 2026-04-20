@@ -24,10 +24,10 @@ cd scripts && npm install
 
 ## E-mail versturen
 
-Gebruik het script `scripts/send-email.js`. Alle SMTP-credentials staan in de omgevingsvariabelen.
+Gebruik het script `scripts/send-email.js`. Alle SMTP-credentials staan in `.env` in de project-`cwd`; geef die door aan Node met `--env-file=.env`.
 
 ```bash
-node scripts/send-email.js \
+node --env-file=.env scripts/send-email.js \
   --to "naam@voorbeeld.nl" \
   --subject "Re: [categorie] — samenvatting" \
   --body "Beste ...,
@@ -45,7 +45,7 @@ Schrijf altijd in het **Nederlands**. Gebruik een vriendelijke, professionele to
 Gebruik het script `scripts/check-inbox.js` om ongelezen e-mails op te halen.
 
 ```bash
-node scripts/check-inbox.js --mark-read
+node --env-file=.env scripts/check-inbox.js --mark-read
 ```
 
 Uitvoer is een JSON-array. Koppel binnenkomende replies aan het juiste Paperclip issue via het onderwerp of e-mailadres van de inzender. Voeg de inhoud toe als comment op het issue.
