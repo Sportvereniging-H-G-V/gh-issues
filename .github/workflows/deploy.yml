@@ -14,13 +14,30 @@ jobs:
         env:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          echo "=== Poging 1: met Authorization header ==="
-          if curl --fail-with-body --request GET "$COOLIFY_WEBHOOK" \
-               --header "Authorization: Bearer $COOLIFY_TOKEN"; then
-            exit 0
+          set -euo pipefail
+
+          extra_headers=()
+          if [[ -n "${CF_ACCESS_CLIENT_ID:-}" && -n "${CF_ACCESS_CLIENT_SECRET:-}" ]]; then
+            extra_headers+=(
+              --header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID"
+              --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+            )
           fi
 
-          echo ""
-          echo "=== Poging 2: zonder Authorization header (webhook-URL met ingebouwde token) ==="
-          curl --fail-with-body --request GET "$COOLIFY_WEBHOOK"
+          http_code=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            --max-time 30 \
+            --request GET "$COOLIFY_WEBHOOK" \
+            --header "Authorization: Bearer $COOLIFY_TOKEN" \
+            "${extra_headers[@]+"${extra_headers[@]}"}")
+
+          echo "HTTP status: $http_code"
+
+          if [[ "$http_code" == "2"* ]]; then
+            echo "Deploy triggered successfully."
+          else
+            echo "::error::Deploy webhook returned $http_code. Verify Cloudflare WAF allows GitHub Actions or add CF_ACCESS_CLIENT_ID/CF_ACCESS_CLIENT_SECRET secrets."
+            exit 1
+          fi
