@@ -15,31 +15,12 @@ jobs:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          # Probeer eerst met Authorization header (Coolify API token flow)
-          http_code=$(curl --silent --output /tmp/coolify_response.txt \
-            --write-out "%{http_code}" \
-            --request GET "$COOLIFY_WEBHOOK" \
-            --header "Authorization: Bearer $COOLIFY_TOKEN")
-          echo "=== Met Authorization header ==="
-          echo "HTTP status: $http_code"
-          cat /tmp/coolify_response.txt
-
-          if [ "$http_code" -ge 400 ] && [ -n "$COOLIFY_TOKEN" ]; then
-            # Probeer zonder Authorization header (webhook URL met ingebouwde token)
-            echo ""
-            echo "=== Zonder Authorization header ==="
-            http_code2=$(curl --silent --output /tmp/coolify_response2.txt \
-              --write-out "%{http_code}" \
-              --request GET "$COOLIFY_WEBHOOK")
-            echo "HTTP status: $http_code2"
-            cat /tmp/coolify_response2.txt
-
-            if [ "$http_code2" -lt 400 ]; then
-              echo "SUCCESS: webhook werkt zonder Authorization header"
-              exit 0
-            fi
+          echo "=== Poging 1: met Authorization header ==="
+          if curl --fail-with-body --request GET "$COOLIFY_WEBHOOK" \
+               --header "Authorization: Bearer $COOLIFY_TOKEN"; then
+            exit 0
           fi
 
-          if [ "$http_code" -ge 400 ]; then
-            exit 1
-          fi
+          echo ""
+          echo "=== Poging 2: zonder Authorization header (webhook-URL met ingebouwde token) ==="
+          curl --fail-with-body --request GET "$COOLIFY_WEBHOOK"
