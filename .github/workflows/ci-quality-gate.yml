@@ -1,0 +1,37 @@
+# DO NOT RENAME — branch-protection contract.
+# The `name:` field below is the prefix of every required status check
+# ("CI Quality Gate Baseline / lint", "… / test", "… / dependency-audit",
+# "… / secret-scan"). Renaming this workflow or the jobs below will silently
+# break branch protection across every consuming repository. See
+# docs/ci-quality-gate-baseline.md and SPO-20 / SPO-47 for context.
+name: CI Quality Gate Baseline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: ./.github/workflows/reusable-lint.yml
+
+  test:
+    uses: ./.github/workflows/reusable-test.yml
+
+  dependency-audit:
+    uses: ./.github/workflows/reusable-dependency-audit.yml
+    with:
+      audit-level: critical
+
+  secret-scan:
+    uses: ./.github/workflows/reusable-secret-scan.yml
