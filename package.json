@@ -11,12 +11,14 @@
     "dev:server": "npm run build && node src/index.js"
   },
   "dependencies": {
+    "@sentry/react": "^10.50.0",
     "express": "^5.2.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^5.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "vite": "^8.0.8"
   }
