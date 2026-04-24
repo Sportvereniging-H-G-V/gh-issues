@@ -378,7 +378,8 @@ app.post('/api/intake/sporthengelo', async (req, res) => {
 // ─── Sentry webhook relay ─────────────────────────────────────────────────────
 
 app.post('/webhooks/sentry', express.raw({ type: '*/*' }), async (req, res) => {
-  const signature = req.headers['sentry-hook-signature'] ?? '';
+  const rawSig = req.headers['sentry-hook-signature'];
+  const signature = Array.isArray(rawSig) ? rawSig[0] : (rawSig ?? '');
   const { SENTRY_WEBHOOK_SECRET, PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_ROUTINE_ID } =
     process.env;
 
@@ -405,14 +406,20 @@ app.post('/webhooks/sentry', express.raw({ type: '*/*' }), async (req, res) => {
     return res.status(400).end();
   }
 
-  const upstream = await fetch(`${PAPERCLIP_API_URL}/api/routines/${PAPERCLIP_ROUTINE_ID}/run`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ source: 'webhook', payload }),
-  });
+  let upstream;
+  try {
+    upstream = await fetch(`${PAPERCLIP_API_URL}/api/routines/${PAPERCLIP_ROUTINE_ID}/run`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ source: 'webhook', payload }),
+    });
+  } catch (err) {
+    console.error('[sentry relay] Network error reaching Paperclip', err);
+    return res.status(502).end();
+  }
 
   if (!upstream.ok) {
     console.error('[sentry relay] Upstream error', upstream.status, await upstream.text());
