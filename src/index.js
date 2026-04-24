@@ -1,6 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { getTemplates } from './templates.js';
 import { PROJECTS } from './config.js';
 
@@ -372,6 +373,60 @@ app.post('/api/intake/sporthengelo', async (req, res) => {
     console.error('[sporthengelo intake]', err);
     res.status(500).json({ error: 'Issue aanmaken mislukt' });
   }
+});
+
+// ─── Sentry webhook relay ─────────────────────────────────────────────────────
+
+app.post('/webhooks/sentry', express.raw({ type: '*/*' }), async (req, res) => {
+  const rawSig = req.headers['sentry-hook-signature'];
+  const signature = Array.isArray(rawSig) ? rawSig[0] : (rawSig ?? '');
+  const { SENTRY_WEBHOOK_SECRET, PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_ROUTINE_ID } =
+    process.env;
+
+  if (!SENTRY_WEBHOOK_SECRET || !PAPERCLIP_API_URL || !PAPERCLIP_API_KEY || !PAPERCLIP_ROUTINE_ID) {
+    console.error('[sentry relay] Missing required env vars');
+    return res.status(503).end();
+  }
+
+  if (!signature.startsWith('sha256=')) {
+    return res.status(401).end();
+  }
+
+  const expected = 'sha256=' + createHmac('sha256', SENTRY_WEBHOOK_SECRET).update(req.body).digest('hex');
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+    return res.status(401).end();
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(req.body);
+  } catch {
+    return res.status(400).end();
+  }
+
+  let upstream;
+  try {
+    upstream = await fetch(`${PAPERCLIP_API_URL}/api/routines/${PAPERCLIP_ROUTINE_ID}/run`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ source: 'webhook', payload }),
+    });
+  } catch (err) {
+    console.error('[sentry relay] Network error reaching Paperclip', err);
+    return res.status(502).end();
+  }
+
+  if (!upstream.ok) {
+    console.error('[sentry relay] Upstream error', upstream.status, await upstream.text());
+    return res.status(502).end();
+  }
+
+  res.status(200).end();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
